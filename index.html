@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Meal Map</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Meal Map">
+<meta name="theme-color" content="#2f6f73">
+<link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="icon" href="img/icon-180.png">
+<link rel="manifest" href="manifest.json">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,800&display=swap">
+<style>
+html{color-scheme:light}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}
+#gate{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
+.gatebox{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:24px;display:flex;flex-direction:column;gap:12px;width:100%;max-width:380px}
+/* Layout: phone-first app — header, day strip, stacked meal cards, bottom tab bar */
+:root{
+  --bg:#f3f6f4; --surface:#ffffff; --ink:#1f2b33; --muted:#5d6b72; --line:#dde5e1;
+  --accent:#2f6f73; --accent-soft:#dcecea; --star:#e0a526;
+  --g:#3f8f5a; --g-soft:#e1f1e5; --y:#b9861a; --y-soft:#f8eed3; --r:#c4544a; --r-soft:#f7e1de;
+  --display:"Bricolage Grotesque",ui-rounded,system-ui,sans-serif;
+  --body:"Nunito Sans",system-ui,-apple-system,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141b1e; --surface:#1c2529; --ink:#e7eeec; --muted:#9aaaae; --line:#2c393e;
+  --accent:#7cc1c2; --accent-soft:#21393b; --star:#f0bf4c;
+  --g:#7ccb92; --g-soft:#1f3326; --y:#e5bd5c; --y-soft:#3a3120; --r:#ec8c82; --r-soft:#3d2422; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141b1e; --surface:#1c2529; --ink:#e7eeec; --muted:#9aaaae; --line:#2c393e;
+  --accent:#7cc1c2; --accent-soft:#21393b; --star:#f0bf4c;
+  --g:#7ccb92; --g-soft:#1f3326; --y:#e5bd5c; --y-soft:#3a3120; --r:#ec8c82; --r-soft:#3d2422; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+.wrap{max-width:640px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 110px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.15}
+h1{font-size:1.75rem}
+h2{font-size:1.3rem}
+h3{font-size:1.08rem}
+.eyebrow{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.muted{color:var(--muted)}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+header.top{display:flex;flex-direction:column;gap:4px;margin-bottom:16px}
+.view[hidden]{display:none}
+
+/* energy picker */
+.energy{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.epick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.epick button{border:2px solid var(--line);background:var(--bg);border-radius:14px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;font-weight:800;font-size:.92rem}
+.epick button small{font-weight:600;color:var(--muted);font-size:.74rem;text-align:center;line-height:1.25}
+.dot{width:14px;height:14px;border-radius:50%;display:inline-block;flex:none}
+.dot.g{background:var(--g)}.dot.y{background:var(--y)}.dot.r{background:var(--r)}
+.epick button[aria-pressed="true"].g{border-color:var(--g);background:var(--g-soft)}
+.epick button[aria-pressed="true"].y{border-color:var(--y);background:var(--y-soft)}
+.epick button[aria-pressed="true"].r{border-color:var(--r);background:var(--r-soft)}
+
+/* day strip */
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:14px 0}
+.days button{border:none;background:transparent;border-radius:12px;padding:8px 0;font-weight:800;font-size:.85rem;color:var(--muted)}
+.days button[aria-pressed="true"]{background:var(--accent);color:var(--surface)}
+.days button .today{display:block;font-size:.6rem;letter-spacing:.06em;text-transform:uppercase}
+
+/* meal cards */
+.slot{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px 14px 14px 16px;display:grid;grid-template-columns:1fr auto;gap:6px 10px;text-align:left;width:100%}
+.slot .when{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center}
+.slot .name{font-family:var(--display);font-weight:700;font-size:1.12rem;min-width:0}
+.slot .meta{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:.75rem;font-weight:800;border-radius:999px;padding:3px 9px;background:var(--accent-soft);color:var(--ink);display:inline-flex;gap:5px;align-items:center}
+.chip.g{background:var(--g-soft)}.chip.y{background:var(--y-soft)}.chip.r{background:var(--r-soft)}
+.chip.reuse{background:transparent;border:1px dashed var(--accent);color:var(--accent)}
+.starbtn{border:none;background:none;font-size:1.35rem;line-height:1;padding:2px 4px;color:var(--line)}
+.starbtn.on{color:var(--star)}
+.bridge{background:var(--accent-soft);border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.swapnote{font-size:.85rem;color:var(--muted)}
+.tip{border-left:4px solid var(--accent);padding:4px 0 4px 12px;font-size:.95rem}
+
+/* lists */
+.section-h{display:flex;justify-content:space-between;align-items:baseline;margin:22px 0 10px;gap:8px;flex-wrap:wrap}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.filters button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-weight:700;font-size:.85rem}
+.filters button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.weekday{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:6px}
+.weekday .line{display:grid;grid-template-columns:76px 1fr;gap:8px;font-size:.93rem;align-items:baseline}
+.weekday .line b{font-size:.72rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.linkish{background:none;border:none;padding:0;text-align:left;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.groc{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:4px}
+.groc label{display:flex;gap:10px;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--line)}
+.groc label:last-child{border-bottom:none}
+.groc input{width:20px;height:20px;margin-top:2px;accent-color:var(--accent);flex:none}
+.groc input:checked + span{text-decoration:line-through;color:var(--muted)}
+.groc .uses{font-size:.78rem;color:var(--accent);font-weight:700}
+
+/* snack cards */
+.snacks{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.snack{background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;display:flex;flex-direction:column}
+.thumb{grid-column:1/-1;width:100%;height:150px;object-fit:cover;border-radius:12px;background:var(--bg)}
+.hero{width:100%;max-height:240px;object-fit:cover;border-radius:16px}
+.snack img.pic{height:150px;width:100%;object-fit:contain;background:#fff;padding:8px}
+.photobtn{border:1px dashed var(--accent);background:transparent;color:var(--accent);border-radius:999px;padding:5px 12px;font-weight:800;font-size:.8rem;align-self:flex-start}
+.snack .pic{height:92px;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:700;font-size:1.05rem;padding:10px;text-align:center;color:var(--ink)}
+.snack .body{padding:12px 14px;display:flex;flex-direction:column;gap:6px;flex:1}
+.howuse summary{cursor:pointer;font-weight:800;font-size:.85rem;color:var(--accent);list-style:none}
+.howuse summary::-webkit-details-marker{display:none}
+.howuse summary::after{content:" ▾"}
+.howuse[open] summary::after{content:" ▴"}
+.howuse ul{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:5px;font-size:.88rem}
+.howuse li{display:flex;gap:8px;align-items:baseline}
+.howuse .dot{width:10px;height:10px;flex:none;transform:translateY(1px)}
+.snack .stores{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+.snack .stores a{font-size:.78rem;font-weight:800;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:3px 10px;text-decoration:none}
+
+/* notes */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.togg{display:flex;gap:6px;flex-wrap:wrap}
+.togg button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 12px;font-weight:700;font-size:.85rem}
+.togg button[aria-pressed="true"]{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+textarea,input[type=text],select{width:100%;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:12px;padding:10px 12px;font:inherit}
+textarea{min-height:84px;resize:vertical}
+.primary{background:var(--accent);color:var(--surface);border:none;border-radius:12px;padding:11px 18px;font-weight:800}
+.primary:disabled{opacity:.5}
+.note{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.note.coach{border-color:var(--accent);background:var(--accent-soft)}
+.note .who{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted);font-weight:700;gap:8px}
+.note p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.del{border:none;background:none;color:var(--muted);font-size:.78rem;text-decoration:underline}
+.status{font-size:.85rem;color:var(--muted)}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(10,20,22,.45);z-index:30;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:640px;max-height:88vh;overflow-y:auto;border-radius:22px 22px 0 0;padding:18px max(18px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px}
+.sheet ul,.sheet ol{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
+.close{border:none;background:var(--bg);border-radius:999px;width:36px;height:36px;font-size:1.1rem;flex:none}
+
+/* tab bar */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);z-index:20;padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+nav.tabs .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+nav.tabs button{border:none;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;font-size:.72rem;font-weight:800;color:var(--muted)}
+nav.tabs button svg{width:22px;height:22px}
+nav.tabs button[aria-current="page"]{color:var(--accent)}
+.fold{background:var(--surface);border:1px solid var(--line);border-radius:18px}
+.fold>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px}
+.fold>summary::-webkit-details-marker{display:none}
+.fold .ftitle{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fold .ftitle .muted{font-size:.85rem}
+.chev{font-size:1.4rem;color:var(--muted);transition:transform .2s;line-height:1}
+.fold[open] .chev{transform:rotate(180deg)}
+.fbody{padding:0 16px 16px}
+.fbody .groc{border:none;padding:0}
+.foldclose{margin-top:12px;width:100%;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:9px;font-weight:800;color:var(--muted);display:flex;justify-content:center;gap:6px;align-items:center}
+.mrow{display:grid;grid-template-columns:70px 1fr 56px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.mrow:last-of-type{border-bottom:none}
+.mrow b{font-size:.7rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.mrow .nm{min-width:0;font-size:.95rem}
+.mini{width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--bg);display:block}
+.mini.empty{display:flex;align-items:center;justify-content:center;font-size:1.3rem}
+.dayblock{border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.scale{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.scale button{border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:9px 0;font-weight:800}
+.scale button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--surface)}
+.tipwrap{position:relative;display:block}
+.tipwrap button{width:100%}
+.pop{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);width:190px;background:var(--ink);color:var(--bg);font-size:.8rem;font-weight:700;line-height:1.35;padding:8px 10px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .15s;z-index:5;text-align:center}
+.tipwrap:first-child .pop{left:0;transform:none}
+.tipwrap:last-child .pop{left:auto;right:0;transform:none}
+@media (hover:hover){.tipwrap:hover .pop{opacity:1}}
+.tipwrap button:focus-visible + .pop{opacity:1}
+.daynav{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;text-align:center;background:var(--bg);border-radius:14px;padding:6px}
+.daynav button{border:none;background:var(--surface);border-radius:12px;height:44px;font-size:1.6rem;font-weight:800;color:var(--accent)}
+.daynav button:disabled{opacity:.3}
+.picked{font-size:.88rem;font-weight:700;color:var(--accent);min-height:1.2em}
+.ends{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);font-weight:700}
+.chart{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-size:12px;font-family:var(--body)}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.thread{display:flex;flex-direction:column;gap:8px;max-height:380px;overflow-y:auto}
+.bub{max-width:85%;padding:9px 13px;border-radius:16px;background:var(--bg);align-self:flex-start;display:flex;flex-direction:column;gap:2px}
+.bub.mine{align-self:flex-end;background:var(--accent);color:var(--surface)}
+.bub small{font-size:.7rem;opacity:.75;font-weight:700}
+.bub p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.hist{border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+footer{margin-top:28px;font-size:.78rem;color:var(--muted);text-align:center}
+@media (prefers-reduced-motion:no-preference){.slot,.snack{transition:transform .15s}.slot:active{transform:scale(.99)}}
+</style>
+</head><body>
+
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow" id="weekEyebrow">Week 1 · Your plan from Rachel</span>
+    <h1 id="appTitle">Meal Map</h1>
+    <div class="filters" id="weekPick" style="margin-top:6px"></div>
+    <p class="muted" style="margin:0">Turn your brain off and follow the plan. Every meal here is gluten free and skips everything that doesn't work for you.</p>
+  </header>
+
+  <!-- TODAY -->
+  <section class="view" id="v-today">
+    <div class="energy">
+      <div>
+        <h3>⚡ How's your energy today?</h3>
+        <span class="muted" style="font-size:.88rem">Tap one. Dinner changes to match. All three are real, nourishing meals.</span>
+      </div>
+      <div class="epick" id="epick">
+        <button class="g" data-e="g" aria-pressed="false"><span class="dot g"></span>Green<small>I've got some energy</small></button>
+        <button class="y" data-e="y" aria-pressed="false"><span class="dot y"></span>Yellow<small>I have 10 minutes</small></button>
+        <button class="r" data-e="r" aria-pressed="false"><span class="dot r"></span>Red<small>Flare day, or I'm done</small></button>
+      </div>
+    </div>
+    <div class="days" id="days"></div>
+    <div class="stack" id="todayList"></div>
+  </section>
+
+  <!-- WEEK -->
+  <section class="view" id="v-week" hidden>
+    <div class="stack">
+      <details class="fold" id="f-prep"><summary><span class="ftitle"><h2>🔪 Meal Prep</h2><span class="muted">Sunday · about 45 min · <span id="prepCount"></span></span></span><span class="chev" aria-hidden="true">⌄</span></summary>
+        <div class="fbody"><p class="muted" style="margin:0">Just for you, not the whole family. Do them in this order and the chili simmers while you knock out the rest.</p><div class="groc" id="prepList"></div></div></details>
+      <details class="fold" id="f-menu"><summary><span class="ftitle"><h2>🗓️ Week Menu</h2><span class="muted">Tap any meal for the recipe</span></span><span class="chev" aria-hidden="true">⌄</span></summary>
+        <div class="fbody stack" id="weekList"></div></details>
+      <details class="fold" id="f-groc"><summary><span class="ftitle"><h2>🛒 Grocery List</h2><span class="muted">Take it to the store · <span id="grocCount"></span></span></span><span class="chev" aria-hidden="true">⌄</span></summary>
+        <div class="fbody stack"><div class="stack" id="grocList"></div><p class="muted" style="margin:0;font-size:.85rem">The list clears itself every Monday, so the whole list is back for the new week. Already have something at home, like frozen berries? Just check it off.</p></div></details>
+    </div>
+  </section>
+
+  <!-- MEALS -->
+  <section class="view" id="v-meals" hidden>
+    <div class="section-h"><h2>🥗 All meal ideas</h2></div>
+    <div class="filters" id="mealFilters"></div>
+    <div class="stack" id="mealList" style="margin-top:12px"></div>
+    <div class="card" id="coachAdd" hidden style="margin-top:18px">
+      <h3>Add a meal idea</h3>
+      <span class="status">Only you see this form. New ideas show up in her list right away.</span>
+      <input type="text" id="addName" placeholder="Meal name, e.g. Lox + egg rice cakes">
+      <div class="row">
+        <select id="addType" style="flex:1;min-width:130px"><option value="breakfast">Breakfast</option><option value="lunch">Lunch</option><option value="dinner">Dinner</option><option value="snack">Snack</option></select>
+        <select id="addEnergy" style="flex:1;min-width:130px"><option value="g">Green energy</option><option value="y">Yellow energy</option><option value="r">Red energy</option></select>
+        <input type="text" id="addTime" placeholder="Time, e.g. 5 min" style="flex:1;min-width:120px">
+      </div>
+      <textarea id="addIng" placeholder="Ingredients, one per line"></textarea>
+      <textarea id="addHow" placeholder="How to make it (optional), one step per line"></textarea>
+      <button class="primary" id="addBtn">Add to meal ideas</button>
+      <span class="status" id="addStatus"></span>
+    </div>
+  </section>
+
+  <!-- SNACKS -->
+  <section class="view" id="v-snacks" hidden>
+    <div class="section-h"><h2>🧺 Pantry</h2></div>
+    <p class="muted" style="margin:0 0 12px">The store-bought foods that work for you, and where to find them. Tap a store to see it there.</p>
+    <div class="stack" id="snackList"></div>
+  </section>
+
+  <!-- NOTES -->
+  <section class="view" id="v-notes" hidden>
+    <div class="stack">
+      <details class="fold" id="f-pulse" open><summary><span class="ftitle"><h2>💓 Daily Pulse</h2><span class="muted" id="pulseSub">Five taps and a win. Takes 30 seconds.</span></span><span class="chev" aria-hidden="true">⌄</span></summary>
+        <div class="fbody stack" id="pulseForm"></div></details>
+      <details class="fold" id="f-trend" open><summary><span class="ftitle"><h2>📈 Your month</h2><span class="muted">How things moved over the last 30 days</span></span><span class="chev" aria-hidden="true">⌄</span></summary>
+        <div class="fbody stack"><div class="filters" id="trendPick"></div><div id="trendChart"></div><div class="stack" id="pulseHistory"></div></div></details>
+      <details class="fold" id="f-msg" open><summary><span class="ftitle"><h2>💬 <span id="msgTitle">Messages with Rachel</span></h2><span class="muted">Only you two can see these</span></span><span class="chev" aria-hidden="true">⌄</span></summary>
+        <div class="fbody stack"><div class="thread" id="thread"></div>
+          <textarea id="msgText" placeholder="Write a message…"></textarea>
+          <button class="primary" id="msgBtn">Send</button><span class="status" id="msgStatus"></span></div></details>
+      <details class="fold" id="f-mnotes"><summary><span class="ftitle"><h2>📝 Meal notes</h2><span class="muted">Notes left on specific meals</span></span><span class="chev" aria-hidden="true">⌄</span></summary>
+        <div class="fbody stack" id="noteList"></div></details>
+    </div>
+  </section>
+
+  <footer>Rachel Wahl Integrative Nutritionist | Emotional &amp; Disordered Eating Specialist<br>This plan is a guide, not a test. Eating something is always better than eating nothing.</footer>
+</div>
+
+<nav class="tabs" aria-label="Sections"><div class="in" id="tabs">
+  <button data-v="today" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Today</button>
+  <button data-v="week"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Week</button>
+  <button data-v="meals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 3v8a3 3 0 0 0 6 0V3M7 3v18M17 3c-2 2-3 5-3 8h3v10"/></svg>Meals</button>
+  <button data-v="snacks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 7h12l-1 14H7z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg>Pantry</button>
+  <button data-v="notes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v12H8l-4 4z"/></svg>Check-in</button>
+</div></nav>
+
+<div class="scrim" id="scrim" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+
+<script>
+const E = {g:"Green",y:"Yellow",r:"Red"};
+const MEALS = {
+  b_quinoa:{n:"Savory quinoa + eggs",t:"breakfast",e:"y",time:"10 min",ing:["1 cup prepped quinoa","2–3 eggs","Big handful spinach","½ avocado","Feta or pumpkin seeds (optional)"],how:["Warm the quinoa.","Scramble eggs with the spinach.","Pile it all in a bowl and top with avocado and feta."]},
+  b_smoothie:{n:"Berry-green protein smoothie + eggs",t:"breakfast",e:"y",time:"5 min",ing:["1 scoop Truvani pea protein","1 cup frozen berries","½ banana","Handful spinach","1 tbsp almond butter","Plant milk (no dairy)","2 hard-boiled eggs on the side"],how:["Blend everything except the eggs.","Eat the eggs with it. A smoothie plus real food keeps you full longer."]},
+  b_salmon:{n:"Smoked salmon toast",t:"breakfast",e:"y",time:"10 min",ing:["2 slices GF bread","2 eggs","Smoked salmon","½ avocado","Dill or everything seasoning"],how:["Toast the bread and fry or scramble the eggs.","Layer avocado, salmon and eggs. Done."]},
+  b_scramble:{n:"Pepper + spinach scramble with goat cheese",t:"breakfast",e:"y",time:"10 min",ing:["3 eggs","Sliced bell pepper (from prep)","Spinach","Goat cheese crumbles","1 slice GF toast"],how:["Soften peppers in a pan for 2 minutes.","Add eggs and spinach and scramble.","Top with goat cheese and eat with toast."]},
+  b_oats:{n:"Protein oats",t:"breakfast",e:"y",time:"5 min",ing:["½ cup certified GF oats","1 scoop Truvani pea protein","Berries","1 tbsp chia","1 tbsp almond butter"],how:["Cook oats in the microwave.","Stir in protein powder after cooking (it clumps if cooked).","Top with berries, chia and almond butter."]},
+  b_baked:{n:"Blueberry baked oatmeal squares",t:"breakfast",e:"g",time:"35 min, mostly oven",ing:["2 cups certified GF oats","3 eggs","1 cup blueberries","¼ cup almond butter","2 tbsp chia","1 cup plant milk","Cinnamon"],how:["Mix everything in a baking dish.","Bake at 350°F for about 30 minutes.","Eat 2 squares with eggs. Freeze the rest for busy mornings."]},
+  l_shrimp:{n:"Lemon shrimp quinoa bowl",t:"lunch",e:"y",time:"5 min, packs cold",ing:["Precooked shrimp (thawed)","1 cup prepped quinoa","Cucumber (from prep)","Jarred roasted red peppers","Lemon + olive oil","Feta (optional)"],how:["Toss everything in a container the night before or morning of.","Pack with an ice pack."]},
+  l_tuna_bean:{n:"Mediterranean tuna + white bean salad",t:"lunch",e:"y",time:"5 min, no reheating",ing:["1 can or pouch light tuna","½ can white beans","Cucumber","Cherry tomatoes","Olives","Lemon + olive oil","Simple Mills crackers"],how:["Mix in a container. It tastes even better after sitting a few hours."]},
+  l_eggbox:{n:"Egg + hummus lunch box",t:"lunch",e:"r",time:"3 min",ing:["2 hard-boiled eggs (from prep)","Hummus cup","Simple Mills crackers","Bell pepper + cucumber strips","An apple"],how:["Toss it all in a bento box. No cooking."]},
+  l_salmon:{n:"Salmon + chickpea rice bowl",t:"lunch",e:"y",time:"5 min",ing:["1 can or pouch salmon","1 microwave rice cup","½ can chickpeas","Shredded carrots","Tahini + lemon"],how:["Layer it in a container. Eat cold or warm the rice at work if you can."]},
+  l_tuna_crack:{n:"Tuna-avocado crackers + fruit",t:"lunch",e:"r",time:"5 min",ing:["Tuna pouch","½ avocado mashed","Dijon + lemon","Cucumber","GF crackers","Grapes or clementine"],how:["Mash tuna with avocado, Dijon and lemon. Scoop with crackers."]},
+  l_plate:{n:"Mediterranean snack plate",t:"lunch",e:"r",time:"No cooking",ing:["2 hard-boiled eggs","Hummus","Chickpeas","Cucumber + peppers","Olives","GF crackers","Feta (optional)"],how:["Put it all on a plate. A snack plate counts as a full meal."]},
+  d_salmon:{n:"Salmon + rice bowl",t:"dinner",e:"y",time:"15 min",ing:["Frozen salmon fillet (or canned)","Microwave rice","Steam-in-bag broccoli","Lemon + olive oil"],how:["Air fry or bake the salmon (400°F, 12–15 min from frozen).","Microwave the rice and broccoli while it cooks.","Squeeze lemon over everything."]},
+  d_noodles:{n:"Shrimp + rice noodles",t:"dinner",e:"y",time:"15 min",ing:["Frozen shrimp","Rice noodles","Sliced bell pepper (from prep)","Frozen stir-fry veg (no corn or peas)","Fresh or jarred ginger","GF tamari"],how:["Soak or boil the noodles.","Sauté shrimp, peppers and veg with ginger until the shrimp is pink.","Toss with noodles and tamari."]},
+  d_alfredo:{n:"Chickpea pasta alfredo",t:"dinner",e:"r",time:"12 min, heat and eat",ing:["Banza chickpea pasta","Primal Kitchen No-Dairy Alfredo","Frozen precooked shrimp","Spinach"],how:["Boil pasta. Toss shrimp in for the last 2 minutes.","Drain, stir in spinach and sauce. That's it."]},
+  d_chili:{n:"Freezer chili bowl",t:"dinner",e:"r",time:"4 min",ing:["1 frozen portion veggie chili","½ avocado","GF toast or microwave rice","Sour cream (if it sits well)"],how:["Microwave the chili. Top with avocado. Eat."]},
+  d_tunaplate:{n:"Tuna + rice + hummus plate",t:"dinner",e:"r",time:"5 min",ing:["Tuna pouch","Microwave rice","Hummus","Cucumber","Olive oil"],how:["Microwave rice and put everything on one plate."]},
+  d_shrimprice:{n:"Shrimp + rice + veggies",t:"dinner",e:"r",time:"8 min",ing:["Frozen precooked shrimp","Microwave rice","Steam-in-bag veggies","GF tamari or lemon"],how:["Microwave all three, combine and season."]},
+  d_toast:{n:"Tuna salad toast",t:"dinner",e:"y",time:"5 min",ing:["2 slices GF bread","1 can or pouch light tuna","Avocado-oil mayo or mashed avocado","Dijon + lemon","Cherry tomatoes"],how:["Mix tuna with mayo, Dijon and lemon.","Pile it on toast and top with tomatoes."]},
+  b_amaranth:{n:"Sweet amaranth porridge with berries",t:"breakfast",e:"g",time:"25 min, makes 2–3 servings",ing:["½ cup amaranth + 1½ cups water","1 scoop Truvani pea protein","Berries","1 tbsp almond butter","Cinnamon"],how:["Simmer amaranth and water, covered, 20–25 minutes, stirring now and then.","Off the heat, stir in protein powder and cinnamon.","Top with berries and almond butter.","Refrigerate leftovers and reheat with a splash of water."]},
+  b_amaranth_sav:{n:"Savory amaranth porridge with egg + avocado",t:"breakfast",e:"g",time:"25 min, makes 2–3 servings",ing:["½ cup amaranth + 1½ cups water","2 eggs","Handful spinach","½ avocado","Feta (optional)","Salt + pepper"],how:["Simmer amaranth and water, covered, 20–25 minutes, stirring now and then. Season with salt.","Fry the eggs and wilt the spinach in the same pan.","Top the amaranth with eggs, spinach, avocado and feta.","Refrigerate leftovers and reheat with a splash of water."]},
+  b_overnight:{n:"Overnight protein oats",t:"breakfast",e:"r",time:"5 min the night before",ing:["½ cup certified GF oats","¾ cup Ripple protein shake or unsweetened almond milk","½ scoop Truvani pea protein","1 tbsp chia seeds","1 tbsp almond or peanut butter","Berries","Cinnamon (optional)"],how:["Stir oats, Ripple, protein powder, chia and cinnamon in a jar.","Refrigerate overnight (or at least 4 hours).","In the morning, top with berries and nut butter. Eat cold or warm it up.","Make 3–4 jars at once. They keep 4 days."]},
+  b_chia:{n:"Protein chia pudding",t:"breakfast",e:"r",time:"5 min the night before",ing:["3 tbsp chia seeds","¾ cup Ripple protein shake or unsweetened almond milk","½ scoop Truvani pea protein","Berries","Chopped nuts or 1 tbsp nut butter","Cinnamon or vanilla (optional)"],how:["Whisk chia, Ripple and protein powder in a jar. Stir again after 5 minutes so it doesn't clump.","Refrigerate overnight.","Top with berries and nuts. Also great as a snack.","Make 3–4 jars at once. They keep 4–5 days."]},
+  b_eggmuffins:{n:"Veggie egg muffins",t:"breakfast",e:"g",time:"30 min, makes 12",ing:["10 eggs","1 bell pepper, diced","Big handful spinach, chopped","¼ onion, diced","Feta or goat cheese","Salt + pepper"],how:["Grease a muffin tin and heat the oven to 350°F.","Divide the veggies and cheese into the cups, then pour whisked eggs over.","Bake 20–22 minutes.","Keeps 4 days in the fridge or freezes well. Grab 3 with a piece of fruit."]},
+  l_tuna_veg:{n:"Tuna salad + crunchy veggies",t:"lunch",e:"r",time:"5 min",ing:["1 can or pouch light tuna","Avocado-oil mayo or mashed avocado","Dijon + lemon","Bell pepper strips, cucumber, baby carrots","Simple Mills crackers (optional)"],how:["Mix the tuna salad in a container.","Pack the cut veggies on the side and use them to scoop."]},
+  d_fajita:{n:"Fajita bowl",t:"dinner",e:"y",time:"15 min",ing:["Microwave rice","Frozen pepper + onion blend","Vegetarian refried beans or black beans","Shrimp (optional)","Avocado","Sour cream (if it sits well)","GF fajita seasoning + lime"],how:["Sauté peppers and onions (and shrimp) with seasoning, 8–10 minutes.","Warm the beans and rice.","Build a bowl and top with avocado, sour cream and lime."]},
+  d_tacos:{n:"Bean tacos",t:"dinner",e:"y",time:"10 min",ing:["Siete grain-free tortillas (corn-free)","Vegetarian refried beans + black beans","Cherry tomatoes or salsa","Avocado","Sour cream or crumbled goat cheese","Shredded lettuce or cabbage"],how:["Warm the beans with a pinch of cumin.","Warm tortillas in a dry pan, 20 seconds per side.","Fill and top."]},
+  s_rx:{n:"RXBAR + an apple",t:"snack",e:"r",time:"Grab and go",ing:["RXBAR","Apple"],how:[]},
+  s_justin:{n:"Almond butter pack + banana",t:"snack",e:"r",time:"Grab and go",ing:["Justin's almond butter squeeze pack","Banana"],how:["Squeeze onto the banana as you go."]},
+  s_chick:{n:"Roasted chickpeas + grapes",t:"snack",e:"r",time:"Grab and go",ing:["Biena roasted chickpeas","Grapes"],how:[]},
+  s_pist:{n:"Pistachios + a clementine",t:"snack",e:"r",time:"Grab and go",ing:["Wonderful no-shell pistachios","Clementine"],how:[]},
+  s_lupini:{n:"Lupini beans + cucumber",t:"snack",e:"r",time:"Grab and go",ing:["Brami lupini beans","Cucumber slices"],how:[]},
+  s_siete:{n:"Siete chips + guacamole",t:"snack",e:"r",time:"Grab and go",ing:["Siete grain-free tortilla chips","Guacamole cup"],how:[]},
+  s_hummus:{n:"Hummus + crackers",t:"snack",e:"r",time:"Grab and go",ing:["Hummus single","Simple Mills crackers","Bell pepper strips"],how:[]},
+  s_eggs:{n:"Hard-boiled eggs + fruit",t:"snack",e:"r",time:"Grab and go",ing:["2 hard-boiled eggs","Any fruit"],how:[]},
+  d_buffalo:{n:"Buffalo cauliflower + chickpea bowl",t:"dinner",e:"y",time:"20 min, mostly oven",ing:["1 bag frozen cauliflower florets","1 can chickpeas, drained","Primal Kitchen Original Buffalo Sauce","Microwave rice or prepped quinoa","Primal Kitchen No-Dairy Ranch","Carrot + celery sticks"],how:["Toss cauliflower and chickpeas with olive oil. Roast at 425°F (or air fry) for 18–20 min.","Toss with buffalo sauce.","Serve over rice with a ranch drizzle and veggie sticks."]},
+  d_teriyaki:{n:"Teriyaki shrimp stir-fry",t:"dinner",e:"y",time:"12 min",ing:["Frozen cooked shrimp","Frozen stir-fry veg (no corn or peas)","Primal Kitchen No-Soy Teriyaki","Microwave rice","Sesame seeds (optional)"],how:["Sauté veg 5 minutes, add shrimp until hot.","Stir in a few spoonfuls of teriyaki. A little goes a long way.","Serve over rice."]},
+  d_teri_salmon:{n:"Sheet-pan teriyaki salmon + broccoli",t:"dinner",e:"g",time:"20 min, mostly oven",ing:["Salmon fillet (fresh or frozen)","Broccoli florets","Primal Kitchen No-Soy Teriyaki","Microwave rice or quinoa"],how:["Put salmon and broccoli on a lined pan with olive oil.","Brush salmon with teriyaki.","Bake at 400°F for 15–18 min. Serve with rice."]},
+  d_bbq:{n:"BBQ shrimp + sweet potato",t:"dinner",e:"y",time:"12 min",ing:["1 sweet potato","Frozen cooked shrimp","Primal Kitchen Unsweetened Classic BBQ","Steam-in-bag broccoli or a side salad"],how:["Poke the sweet potato and microwave 6–8 min.","Warm shrimp in a pan with BBQ sauce.","Split the potato and pile shrimp on top. Add veggies on the side."]},
+  d_cilantro:{n:"Cilantro-lime shrimp rice bowl",t:"dinner",e:"y",time:"12 min",ing:["Frozen cooked shrimp","Microwave rice","Black beans","Cherry tomatoes + avocado","Primal Kitchen Cilantro Lime Dressing"],how:["Warm the shrimp, rice and beans.","Build a bowl with tomatoes and avocado.","Drizzle with cilantro lime dressing."]},
+  l_greek:{n:"Greek chickpea salad",t:"lunch",e:"r",time:"5 min, packs cold",ing:["1 can chickpeas","Cucumber + cherry tomatoes","Olives","Feta","Primal Kitchen Greek Vinaigrette","Tuna pouch (optional, for more protein)"],how:["Mix everything in a container. It keeps 3 days and gets better as it sits."]},
+  l_sesame:{n:"Sesame ginger shrimp noodle salad",t:"lunch",e:"y",time:"10 min, packs cold",ing:["Rice noodles","Precooked shrimp","Cucumber + shredded carrots","Primal Kitchen Sesame Ginger Vinaigrette"],how:["Cook noodles and rinse in cold water.","Toss with shrimp, veggies and dressing. Eat cold."]},
+  d_spaghetti:{n:"Protein spaghetti with zucchini",t:"dinner",e:"y",time:"15 min",ing:["Banza chickpea spaghetti","Jarred GF marinara (Rao's or Primal Kitchen)","1 zucchini, diced","Spinach","Shrimp, lentils or a scoop of ricotta for extra protein"],how:["Boil pasta per the box.","Sauté zucchini 5 min, add marinara and spinach.","Stir in shrimp or lentils, toss with pasta. Top with ricotta if you like."]},
+  d_lentilsoup:{n:"Red lentil + spinach soup",t:"dinner",e:"g",time:"30 min, freezer friendly",ing:["1 cup red lentils","1 onion + 2 carrots, diced","1 can diced tomatoes","4 cups GF vegetable broth","Cumin + garlic","Big handful spinach","Lemon"],how:["Sauté onion and carrots 5 min.","Add lentils, tomatoes, broth and spices. Simmer 20 min.","Stir in spinach and a squeeze of lemon.","Freeze extras in single portions."]},
+  d_whitechili:{n:"White bean + zucchini chili",t:"dinner",e:"g",time:"30 min, freezer friendly",ing:["2 cans white beans","1 zucchini + 1 bell pepper, diced","1 onion","1 can green chiles","3 cups GF vegetable broth","Cumin + oregano","Avocado + sour cream to top"],how:["Sauté onion, pepper and zucchini 5 min.","Add beans, chiles, broth and spices. Simmer 20 min.","Mash some beans against the pot to thicken.","Top with avocado and sour cream. Freeze extras."]},
+  d_tomatosoup:{n:"Shortcut tomato + white bean soup",t:"dinner",e:"r",time:"8 min",ing:["1 carton dairy-free, GF tomato soup","½ can white beans","Handful spinach","GF toast or crackers"],how:["Heat soup with the beans and spinach.","Eat with toast. A hard-boiled egg on the side adds protein."]},
+  d_shrimpsoup:{n:"Ginger shrimp noodle soup",t:"dinner",e:"y",time:"15 min",ing:["4 cups GF vegetable broth","Fresh or jarred ginger + garlic","GF tamari","Rice noodles","Frozen cooked shrimp","Spinach or bok choy"],how:["Simmer broth with ginger, garlic and a splash of tamari 5 min.","Add noodles, shrimp and greens. Cook until the noodles are soft."]},
+  d_peppers:{n:"Lentil + bean stuffed peppers",t:"dinner",e:"g",time:"40 min, mostly oven",ing:["4 bell peppers","1 cup cooked lentils","1 can black beans","1 cup prepped quinoa","Canned diced tomatoes","1 zucchini, diced","Cumin + chili powder","Avocado to top"],how:["Halve and seed peppers.","Mix lentils, beans, quinoa, tomatoes, zucchini and spices.","Stuff, cover with foil, bake at 375°F for 30 minutes.","Freeze extras in single portions."]},
+  d_chilibatch:{n:"Big-batch veggie chili",t:"dinner",e:"g",time:"45 min, mostly simmering",ing:["2 cans beans","1 cup dry red lentils","2 cans diced tomatoes","1 onion","2 bell peppers","1 zucchini","Chili powder, cumin, garlic"],how:["Sauté onion and peppers.","Add everything else plus 3 cups water. Simmer 30 minutes.","Eat a bowl now and freeze 4 single portions."]},
+};
+var PLAN = [
+  {d:"Mon",b:"b_quinoa",l:"l_shrimp",s:"RXBAR + an apple",d1:{g:"d_salmon",y:"d_salmon",r:"d_tunaplate"},reuse:"Quinoa from Sunday prep shows up again Thursday."},
+  {d:"Tue",b:"b_smoothie",l:"l_tuna_bean",s:"Justin's almond butter pack + banana",d1:{g:"d_noodles",y:"d_noodles",r:"d_shrimprice"},reuse:"Bell peppers from prep go in tonight's noodles and tomorrow's scramble."},
+  {d:"Wed",b:"b_scramble",l:"l_eggbox",s:"Biena roasted chickpeas",d1:{g:"d_alfredo",y:"d_alfredo",r:"d_alfredo"},reuse:"Shrimp and spinach carry over from Monday and Tuesday."},
+  {d:"Thu",b:"b_quinoa",l:"l_salmon",s:"Pistachios + a clementine",d1:{g:"d_salmon",y:"d_toast",r:"d_chili"},reuse:"Chili from the freezer. Zero cooking."},
+  {d:"Fri",b:"b_oats",l:"l_tuna_crack",s:"Brami lupini beans",d1:{g:"d_toast",y:"d_toast",r:"d_chili"},reuse:"Avocado, tomatoes and lemon from earlier in the week."},
+  {d:"Sat",b:"b_scramble",l:"l_plate",s:"Siete chips + guacamole cup",d1:{g:"d_peppers",y:"d_noodles",r:"d_chili"},reuse:"Stuffed peppers use leftover quinoa, beans and zucchini."},
+  {d:"Sun",b:"b_baked",l:"l_plate",s:"Hummus cup + Simple Mills crackers",d1:{g:"d_chilibatch",y:"d_salmon",r:"d_chili"},reuse:"Prep day: chili, quinoa, eggs and chopped veggies for next week."},
+];
+const BRIDGE = "Eat a bridge snack while you cook for the family: a hard-boiled egg, a handful of nuts, or hummus and crackers. Then sit down for your own dinner, even a Red one.";
+const SNACKS = [
+  {n:"RXBAR",tag:"Egg-white protein",c:"--y-soft",d:"Dates, nuts and egg whites. Pick flavors without peanut if that bothers you. Pair with fruit or nuts so the date sugar hits slower.",q:"RXBAR",s:["Target","Meijer","Amazon"]},
+  {n:"Justin's Almond Butter Squeeze Packs",tag:"Healthy fats",c:"--g-soft",d:"Squeeze onto a banana, apple or rice cake. Lives in your work bag.",q:"Justin's almond butter squeeze pack",s:["Target","Meijer","Amazon"]},
+  {n:"Wild Planet or Safe Catch Tuna & Salmon",tag:"Protein-rich",c:"--accent-soft",d:"Ready-to-eat fish. Add crackers and a fruit and it's a mini-meal. Choose light tuna most often.",q:"wild planet tuna pouch",s:["Target","Meijer","Amazon"]},
+  {n:"Simple Mills Almond Flour Crackers",tag:"Gluten free",c:"--y-soft",d:"Grain-free and corn-free. Great with hummus, tuna or goat cheese.",q:"simple mills almond flour crackers",s:["Target","Meijer","Amazon"]},
+  {n:"Biena Roasted Chickpeas",tag:"Fiber + protein",c:"--r-soft",d:"Crunchy and filling. Choose Sea Salt or Honey Roasted only if sugar sits fine.",q:"biena roasted chickpeas",s:["Target","Amazon"]},
+  {n:"Brami Lupini Bean Snacks",tag:"Protein-rich",c:"--g-soft",d:"A plant snack with a lot of protein. Salty and briny like olives.",q:"brami lupini beans",s:["Target","Amazon"]},
+  {n:"Sabra Hummus Singles",tag:"Refrigerated",c:"--accent-soft",d:"Classic hummus cups. Skip the pretzel packs (they contain gluten). Keep with an ice pack.",q:"sabra classic hummus singles",s:["Target","Meijer"]},
+  {n:"Hard-Boiled Egg Packs",tag:"Protein-rich",c:"--y-soft",d:"Already peeled. For weeks you skip Sunday prep. Eggland's Best and store brands both work.",q:"hard boiled eggs peeled",s:["Target","Meijer"]},
+  {n:"Wonderful No-Shell Pistachios",tag:"Healthy fats",c:"--g-soft",d:"Grab a small handful with a clementine or apple.",q:"wonderful no shells pistachios",s:["Target","Meijer","Amazon"]},
+  {n:"Siete Grain-Free Tortilla Chips",tag:"Corn free",c:"--r-soft",d:"Made from cassava, no corn. Pair with guacamole or bean dip.",q:"siete grain free tortilla chips",s:["Target","Meijer","Amazon"]},
+  {n:"Ripple Ready-to-Drink Protein Shake",tag:"Dairy free",c:"--accent-soft",d:"Pea-based like your Truvani powder. Choose Unsweetened or Original to keep sugar lower. Good backup on break.",q:"ripple protein shake",s:["Target","Meijer","Amazon"]},
+  {n:"Banza Chickpea Pasta + Primal Kitchen No-Dairy Alfredo",tag:"Red-day dinner",c:"--r-soft",d:"Your heat-and-eat pantry pair. Keep a box and jar on hand at all times.",q:"primal kitchen no dairy alfredo",s:["Target","Meijer","Amazon"]},
+];
+SNACKS[11].g="heat";
+SNACKS.push(
+  {g:"heat",n:"Siete Grain-Free Tortillas",tag:"Corn free",c:"--y-soft",d:"Almond-flour or cassava tortillas for bean tacos. Warm 20 seconds per side.",q:"siete almond flour tortillas",s:["Target","Meijer","Amazon"]},
+  {g:"heat",n:"Amy's Vegetarian Refried Beans",tag:"No lard",c:"--r-soft",d:"Regular refried beans often use lard (pork). Choose cans labeled vegetarian.",q:"amy's vegetarian refried beans",s:["Target","Meijer","Amazon"]},
+  {g:"heat",n:"Microwave Rice + Quinoa Cups",tag:"90 seconds",c:"--accent-soft",d:"Seeds of Change or Ben's Original Ready Rice. Plain varieties are simplest. Check flavored ones for gluten.",q:"seeds of change microwave quinoa rice",s:["Target","Meijer","Amazon"]},
+  {g:"heat",n:"Frozen Pepper + Onion Blend",tag:"Fajita shortcut",c:"--g-soft",d:"Already sliced for fajita bowls. Store brands work great.",q:"frozen pepper onion blend",s:["Target","Meijer"]},
+  {g:"heat",n:"Steam-in-Bag Broccoli + Veggies",tag:"No corn or peas",c:"--g-soft",d:"Birds Eye Steamfresh or store brand. Skip any medley with corn or peas.",q:"birds eye steamfresh broccoli",s:["Target","Meijer"]},
+  {g:"heat",n:"Frozen Cooked Shrimp + Salmon Fillets",tag:"Protein-rich",c:"--accent-soft",d:"Store-brand frozen shrimp and individually wrapped salmon. They cook from frozen.",q:"frozen cooked shrimp",s:["Target","Meijer"]},
+  {g:"basics",n:"Canyon Bakehouse Gluten-Free Bread",tag:"Certified GF",c:"--y-soft",d:"For toast nights. Keep a loaf in the freezer and toast slices straight from frozen.",q:"canyon bakehouse gluten free bread",s:["Target","Meijer","Amazon"]},
+  {g:"basics",n:"Bob's Red Mill GF Oats + Amaranth",tag:"Certified GF",c:"--y-soft",d:"Gluten-free oats and whole-grain amaranth for porridge and baked squares.",q:"bob's red mill amaranth",s:["Target","Meijer","Amazon"]},
+  {g:"basics",n:"Truvani Pea Protein",tag:"Your powder",c:"--g-soft",d:"Your go-to for smoothies, oats and sweet amaranth.",q:"tuvani pea protein",s:["Amazon"]},
+  {g:"basics",n:"Primal Kitchen Avocado Oil Mayo",tag:"Dairy free",c:"--accent-soft",d:"For tuna salad. Mashed avocado works too.",q:"primal kitchen avocado oil mayo",s:["Target","Meijer","Amazon"]},
+  {g:"basics",n:"San-J Gluten-Free Tamari",tag:"Soy sauce swap",c:"--r-soft",d:"Regular soy sauce has wheat. Tamari labeled gluten free is safe.",q:"san-j gluten free tamari",s:["Target","Meijer","Amazon"]},
+  {g:"basics",n:"Unsweetened Almond Milk",tag:"Dairy free",c:"--g-soft",d:"Califia or Silk unsweetened, for smoothies and oats.",q:"unsweetened almond milk",s:["Target","Meijer"]},
+);
+const USES=[
+  [["r","Snack: bar + an apple or a few nuts"],["r","Red-day breakfast: bar + a hard-boiled egg"]],
+  [["r","Squeeze on a banana, apple or rice cake"],["y","Stir into protein oats or a smoothie"]],
+  [["r","Eat with crackers + fruit for a mini-meal"],["r","Dump over microwave rice with hummus"],["y","Mix into tuna salad toast or a bean salad"]],
+  [["r","Top with hummus, tuna or goat cheese"],["r","Build a snack plate with eggs + veggies"]],
+  [["r","Snack by the handful"],["y","Sprinkle on a rice bowl or salad for crunch"]],
+  [["r","Snack straight from the pack"],["y","Toss into a tuna + white bean salad"]],
+  [["r","Dip with crackers, peppers or cucumber"],["r","Spoon onto a rice bowl as a sauce"],["y","Spread on GF toast under eggs"]],
+  [["r","Snack: 2 eggs + fruit"],["r","Slice onto toast or a rice bowl"],["y","Mash into egg salad with avocado"]],
+  [["r","A small handful with fruit"],["y","Chop over amaranth or oats"]],
+  [["r","Dip in guacamole or bean dip"],["y","Crush over a fajita bowl or chili"]],
+  [["r","Drink on break with a banana"],["r","Red-day breakfast with a bar or egg"],["y","Use as the milk in oats or a smoothie"]],
+  [["r","Heat and eat with frozen shrimp + spinach"],["r","Swap the alfredo for jarred GF marinara"],["y","Add steam-in-bag broccoli for extra veggies"]],
+  [["r","Warm with refried beans + avocado"],["y","Bean tacos or shrimp tacos"],["g","Breakfast tacos with scrambled eggs + peppers"]],
+  [["r","Microwave + top with avocado and chips"],["y","Spread in bean tacos"],["y","Spoon into a fajita bowl"]],
+  [["r","Base for tuna, shrimp or salmon in 90 seconds"],["y","Fajita bowl or salmon bowl"],["g","Stuff into peppers with beans"]],
+  [["r","Microwave with frozen shrimp + rice"],["y","Fajita bowls or tacos"],["y","Toss into an egg scramble"]],
+  [["r","Steam alongside any frozen protein"],["r","Stir into chickpea pasta"]],
+  [["r","Shrimp + rice + veggies, all from the freezer"],["y","Shrimp noodles or fajita bowl"],["y","Air fry salmon from frozen, 12–15 min"]],
+  [["r","Toast + tuna salad or avocado"],["y","Smoked salmon toast with eggs"]],
+  [["y","Protein oats in the microwave"],["g","Sweet or savory amaranth porridge"],["g","Baked oatmeal squares"]],
+  [["r","Shake with plant milk on the way out"],["y","Stir into oats or sweet amaranth"]],
+  [["r","Tuna or egg salad in 2 minutes"],["y","Mix with lemon for a quick dressing"]],
+  [["r","Drizzle on shrimp + rice"],["y","Shrimp rice noodles"]],
+  [["r","Pour over GF oats"],["y","Smoothie base"]],
+];
+USES.forEach((u,i)=>{if(SNACKS[i])SNACKS[i].u=u;});
+SNACKS.push(
+  {g:"sauce",n:"Primal Kitchen Original Buffalo Sauce",tag:"Dairy free",c:"--r-soft",d:"Tangy and spicy. Turns cauliflower, chickpeas or shrimp into a meal.",q:"primal kitchen buffalo sauce",s:["Target","Meijer","Amazon"],u:[["y","Buffalo cauliflower + chickpea bowl"],["r","Toss with warm shrimp + rice"],["r","Stir into tuna salad for buffalo tuna"]]},
+  {g:"sauce",n:"Primal Kitchen No-Soy Teriyaki",tag:"Soy + gluten free",c:"--y-soft",d:"Sweet and savory. A few spoonfuls is plenty.",q:"primal kitchen no soy teriyaki",s:["Target","Meijer","Amazon"],u:[["r","Shrimp + rice + frozen veg"],["y","Teriyaki shrimp stir-fry"],["g","Sheet-pan teriyaki salmon"]]},
+  {g:"sauce",n:"Primal Kitchen Unsweetened Classic BBQ",tag:"No added sugar",c:"--r-soft",d:"Pick the unsweetened one. It sits better with blood sugar.",q:"primal kitchen unsweetened classic bbq sauce",s:["Target","Meijer","Amazon"],u:[["y","BBQ shrimp + sweet potato"],["y","Brush on salmon before baking"],["r","Stir into beans for quick BBQ beans"]]},
+  {g:"sauce",n:"Primal Kitchen Cilantro Lime Dressing",tag:"Dressing + marinade",c:"--g-soft",d:"Bright and fresh. Great on anything Mexican-style.",q:"primal kitchen cilantro lime dressing",s:["Target","Meijer","Amazon"],u:[["y","Cilantro-lime shrimp rice bowl"],["y","Drizzle on bean tacos or a fajita bowl"]]},
+  {g:"sauce",n:"Primal Kitchen Greek + Sesame Ginger Vinaigrettes",tag:"Dressing + marinade",c:"--accent-soft",d:"Two dressings that turn beans, noodles or fish into a packable lunch.",q:"primal kitchen greek vinaigrette",s:["Target","Meijer","Amazon"],u:[["r","Greek chickpea salad"],["y","Sesame ginger shrimp noodle salad"],["r","Toss with tuna + white beans"]]},
+  {g:"sauce",n:"Primal Kitchen No-Dairy Ranch",tag:"Dairy free",c:"--y-soft",d:"Creamy without milk.",q:"primal kitchen no dairy ranch",s:["Target","Meijer","Amazon"],u:[["r","Dip for veggie sticks"],["y","Drizzle on a buffalo bowl"]]},
+  {g:"sauce",n:"Rao's Marinara",tag:"Gluten free",c:"--r-soft",d:"Simple ingredients, no added sugar.",q:"rao's marinara sauce",s:["Target","Meijer","Amazon"],u:[["r","Heat with Banza + frozen shrimp"],["y","Protein spaghetti with zucchini"],["r","Simmer eggs in it for a quick shakshuka"]]},
+  {g:"heat",n:"GF Vegetable Broth",tag:"Soup base",c:"--g-soft",d:"Pacific Foods or Kitchen Basics. Choose vegetable, not chicken.",q:"pacific foods vegetable broth",s:["Target","Meijer","Amazon"],u:[["g","Red lentil soup or white bean chili"],["y","Ginger shrimp noodle soup"]]},
+  {g:"heat",n:"Dairy-Free Tomato Soup",tag:"Red-day dinner",c:"--r-soft",d:"Pacific Foods or Imagine. Check the carton for milk and gluten.",q:"pacific foods organic tomato soup",s:["Target","Meijer","Amazon"],u:[["r","Add white beans + spinach"],["r","Dip GF toast or a tuna melt"]]},
+  {g:"heat",n:"Frozen Cauliflower Florets",tag:"Freezer veg",c:"--g-soft",d:"Roasts from frozen. Any store brand.",q:"frozen cauliflower florets",s:["Target","Meijer"],u:[["y","Buffalo cauliflower bowl"],["r","Steam and toss with teriyaki"]]},
+  {g:"snack",n:"siggi's Plant-Based Coconut Blend",tag:"Dairy free",c:"--y-soft",d:"A non-dairy yogurt cup with protein. Vanilla & Cinnamon is a good pick.",q:"siggi's plant based coconut yogurt",s:["Target","Meijer","Amazon"],u:[["r","Snack cup with berries + nuts"],["r","Red-day breakfast with a hard-boiled egg"],["y","Top overnight oats or chia pudding"]]},
+  {g:"basics",n:"So Delicious Unsweetened Coconut Yogurt",tag:"No added sugar",c:"--accent-soft",d:"Plain, dairy-free and unsweetened. Works sweet or savory.",q:"so delicious unsweetened plain coconut yogurt",s:["Target","Meijer","Amazon"],u:[["r","Bowl with berries, chia + a scoop of Truvani"],["r","Swap for sour cream on tacos or chili"],["y","Stir into overnight oats for extra creaminess"]]},
+  {g:"heat",n:"Goodles Vegan Be Heroes Mac",tag:"Gluten + dairy free",c:"--y-soft",d:"A boxed mac with plant-based cheese. Add a protein to make it a full meal.",q:"goodles vegan be heroes",s:["Target","Meijer","Amazon"],u:[["r","Stir in frozen shrimp or tuna"],["r","Add steam-in-bag broccoli"],["y","Mix in white beans + spinach"]]},
+  {g:"heat",n:"Lotus Foods Rice Ramen Cups",tag:"3 minutes",c:"--g-soft",d:"Gluten-free ramen in a cup. Just add hot water.",q:"lotus foods rice ramen cup",s:["Target","Meijer","Amazon"],u:[["r","Add frozen cooked shrimp + spinach"],["r","Drop in a soft-boiled egg"],["y","Base for ginger shrimp noodle soup"]]},
+  {g:"heat",n:"Somos Mexican Brown Rice",tag:"90 seconds",c:"--r-soft",d:"Already seasoned with tomatoes, peppers and onions.",q:"somos mexican brown rice",s:["Target","Meijer","Amazon"],u:[["r","Top with black beans + avocado"],["y","Base for a fajita or cilantro-lime bowl"],["y","Fill bean tacos"]]},
+  {g:"heat",n:"Simply Nature 90-Second Jasmine Rice",tag:"Aldi",c:"--accent-soft",d:"Organic, plain and budget friendly.",q:"simply nature jasmine rice",s:["Aldi"],u:[["r","Tuna, hummus + cucumber plate"],["r","Shrimp + rice + veggies"],["y","Teriyaki or salmon bowls"]]},
+  {g:"sauce",n:"Siete Mild Taco Seasoning",tag:"Certified GF",c:"--r-soft",d:"Gluten free. Many taco packets aren't, so this one is a safe swap.",q:"siete taco seasoning",s:["Target","Meijer","Amazon"],u:[["y","Season beans for bean tacos"],["y","Shrimp or veggies for fajita bowls"],["r","Stir into refried beans for a quick dip"]]},
+);
+[14,15,16,31,32,33].forEach(i=>{if(SNACKS[i])SNACKS[i].hide=true;});
+Object.assign(SNACKS[11],{n:"Banza Chickpea Pasta",tag:"Protein pasta",d:"Pasta made from chickpeas. More protein and fiber than regular pasta, and gluten free.",q:"banza chickpea pasta",u:[["r","Heat with No-Dairy Alfredo + frozen shrimp"],["r","Toss with Rao's marinara + spinach"],["y","Protein spaghetti with zucchini"]]});
+SNACKS.push(
+  {g:"heat",n:"Siete Grain-Free Taco Shells",tag:"Corn free",c:"--r-soft",d:"Crunchy shells made without corn. Warm in the oven for a few minutes.",q:"siete grain free taco shells",s:["Target","Meijer","Amazon"],u:[["y","Crunchy bean tacos"],["y","Shrimp tacos with cilantro lime dressing"],["r","Crush over a fajita bowl"]]},
+  {g:"sauce",n:"Primal Kitchen No-Dairy Alfredo",tag:"Dairy free",c:"--accent-soft",d:"Creamy alfredo made with avocado oil and no milk.",q:"primal kitchen no dairy alfredo",s:["Target","Meijer","Amazon"],u:[["r","Chickpea pasta alfredo with shrimp + spinach"],["r","Stir into rice with frozen broccoli"],["y","Drizzle over baked salmon"]]},
+);
+const PANTRY_GROUPS=[["snack","🍎 Grab-and-go snacks","For your 15-minute break, the car, and the \"I'm cooking for everyone else\" hour. Pair a carb with a protein when you can. It keeps energy steadier."],["sauce","🥫 Sauces that make the meal","Pair one of these with a protein and a base (rice, pasta or a potato) and dinner is done."],["heat","🔥 Heat-and-eat staples","For Red days. Keep these stocked and dinner is always 10 minutes away."],["basics","🫙 Pantry basics",""]];
+const STORE_URL = {Aldi:q=>"https://www.aldi.us/results?q="+encodeURIComponent(q),Target:q=>"https://www.target.com/s?searchTerm="+encodeURIComponent(q),Meijer:q=>"https://www.meijer.com/shopping/search.html?text="+encodeURIComponent(q),Amazon:q=>"https://www.amazon.com/s?k="+encodeURIComponent(q)};
+var GROCERY = [
+  {h:"Produce",items:[["Bell peppers (6)","Scrambles, noodles, chili, stuffed peppers, lunch boxes"],["Cucumbers (3)","4 lunches + snack plates"],["Spinach (big tub)","Breakfasts, smoothie, alfredo"],["Avocados (4)","Breakfasts, chili topping, toast"],["Zucchini (2)","Chili + stuffed peppers"],["Lemons (3)","Bowls, salmon, tuna"],["Cherry tomatoes","Tuna salad + toast"],["Onion (1)","Chili"],["Apples, bananas, clementines, grapes","Snacks + smoothie"],["Shredded carrots","Salmon bowl"]]},
+  {h:"Protein",items:[["Eggs (2 dozen)","Breakfasts, prep, lunch boxes"],["Frozen precooked shrimp (2 bags)","Lunch bowl, noodles, alfredo"],["Frozen salmon fillets","Two dinners"],["Canned or pouch light tuna (5)","Lunches, tuna toast + Red dinner"],["Canned salmon (1)","Thu lunch bowl"],["Smoked salmon","Breakfast toast"]]},
+  {h:"Pantry",items:[["Quinoa","Breakfasts, lunch, stuffed peppers"],["Certified GF oats","Protein oats + baked squares"],["Microwave rice cups","Salmon bowl, Red dinners"],["Rice noodles","Shrimp noodles"],["Banza chickpea pasta","Alfredo"],["Primal Kitchen No-Dairy Alfredo","Alfredo"],["Beans: white, black, chickpeas, 2 more for chili","Lunches, chili, peppers"],["Dry red lentils","Chili + stuffed peppers"],["Canned diced tomatoes (3)","Chili + stuffed peppers"],["Jarred roasted red peppers","Shrimp bowl"],["GF tamari, tahini, Dijon, olives, avocado-oil mayo","Sauces + salads"],["Almond butter, chia","Oats, smoothie, squares"],["GF bread","Toast meals"],["Simple Mills crackers","Lunches + snacks"]]},
+  {h:"Fridge + freezer",items:[["Hummus + hummus singles","Lunches + snacks"],["Feta, goat cheese","Breakfasts + bowls"],["Plant milk (unsweetened)","Smoothie + oats"],["Frozen berries","Smoothie + squares"],["Steam-in-bag broccoli + veggies (no corn or peas)","Dinners"],["Frozen stir-fry veg (no corn or peas)","Noodles"]]},
+];
+
+const WEEKS=[
+  {id:"w1",label:"Week 1",note:"Your first week",plan:PLAN,prep:PREP,groc:GROCERY},
+];
+const curWeek=()=>{const w=WEEKS[state.wk]||WEEKS[WEEKS.length-1];if(!w.prep&&w.id==="w1")w.prep=PREP;return w;};
+function renderWeekPick(){
+  $("#weekPick").innerHTML=WEEKS.map((w,i)=>`<button data-wk="${i}" aria-pressed="${i===state.wk}">🗂️ ${esc(w.label)}</button>`).join("");
+  $("#weekEyebrow").textContent=`${curWeek().label} · ${state.wk===WEEKS.length-1?"Your plan from Rachel":"A past week, still here for leftovers"}`;
+}
+let state = {wk:WEEKS.length-1, checksAll:{}, checks:{prep:{},groc:{}}, pulse:[], metric:"energy", photos:{},assets:null, canUpload:false, view:"today", day:(new Date().getDay()+6)%7, energy:null, mealFilter:"all", favs:new Set(), extras:[], notes:[], db:null, role:"client", uid:null};
+try{ const e=localStorage.getItem("mm-energy-"+new Date().toDateString()); if(e) state.energy=e; }catch(_){}
+function weekKey(){const d=new Date();d.setDate(d.getDate()-((d.getDay()+6)%7));return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();}
+try{ const w=localStorage.getItem("mm-wk"); const i=WEEKS.findIndex(x=>x.id===w); if(i>=0) state.wk=i; }catch(_){}
+try{ const c=JSON.parse(localStorage.getItem("mm-checks2")||"null"); if(c) state.checksAll=c; }catch(_){}
+loadChecks();
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const allMeals=()=>{const m={...MEALS};state.extras.forEach(x=>m["x_"+x.id]={n:x.name,t:x.type,e:x.energy,time:x.time,ing:x.ing||[],how:x.how||[],extra:true,xid:x.id});return m;};
+
+function star(id){const on=state.favs.has(id);return `<button class="starbtn ${on?"on":""}" data-star="${id}" aria-label="${on?"Remove from":"Add to"} favorites" aria-pressed="${on}">★</button>`;}
+function slot(label,id,extra=""){const m=allMeals()[id];if(!m)return"";return `<div class="slot" data-open="${id}" role="button" tabindex="0">
+  <div class="when"><span class="eyebrow">${label}</span>${star(id)}</div>
+  ${state.photos[id]?`<img class="thumb" src="${esc(state.photos[id])}" alt="${esc(m.n)}" loading="lazy">`:""}
+  <div class="name">${esc(m.n)}</div>
+  <div class="meta"><span class="chip ${m.e}"><span class="dot ${m.e}"></span>${E[m.e]}</span><span class="chip">${esc(m.time)}</span></div>${extra}</div>`;}
+
+function renderToday(){
+  const days=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"], t=(new Date().getDay()+6)%7;
+  $("#days").innerHTML=days.map((d,i)=>`<button data-day="${i}" aria-pressed="${i===state.day}">${d}${i===t?'<span class="today">today</span>':""}</button>`).join("");
+  document.querySelectorAll("#epick button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.e===state.energy));
+  const p=curWeek().plan[state.day], e=state.energy||"y", dn=p.d1[e];
+  const other=["g","y","r"].filter(k=>k!==e&&p.d1[k]!==dn).map(k=>`${E[k]}: ${esc(MEALS[p.d1[k]].n)}`);
+  $("#todayList").innerHTML=
+    slot("🍳 Breakfast · at home",p.b)+
+    slot("🥡 Lunch · 15-minute break",p.l)+
+    `<div class="slot" style="cursor:default"><div class="when"><span class="eyebrow">🥜 Work snack</span></div><div class="name">${esc(p.s)}</div><div class="meta"><button class="linkish chip" data-goto="snacks">🧺 See it in Pantry</button></div></div>`+
+    `<div class="bridge"><span class="eyebrow">🌉 While you cook for the family</span><span>${BRIDGE}</span></div>`+
+    slot(`🌙 Dinner · ${state.energy?E[e]+" energy":"pick your energy above"}`,dn, other.length?`<div class="swapnote" style="grid-column:1/-1">Other options tonight: ${other.join(" · ")}</div>`:"")+
+    `<div class="tip">${esc(p.reuse)}</div>`;
+}
+var PREP=[
+  ["Start the veggie chili first","Sauté 1 onion + 2 peppers, then add 2 cans beans, 1 cup red lentils, 2 cans tomatoes, 1 zucchini, spices and 3 cups water. Simmer 30 min while you do the rest.","Sunday dinner + Red-day dinners all week"],
+  ["Cook a big pot of quinoa (2 cups dry)","Rinse, then simmer with 4 cups water for 15 min. Cool and refrigerate.","Mon + Thu breakfast, Mon lunch, Sat stuffed peppers"],
+  ["Hard-boil 8 eggs","Boil 10 min, then an ice bath. Peel 4 now so they're grab-and-go.","Tue breakfast, Wed lunch box, snack plates, bridge snacks"],
+  ["Slice 3 bell peppers + 2 cucumbers","Store in containers with a paper towel so they stay crisp.","Scrambles, noodles, lunch bowls, lunch boxes"],
+  ["Move 1 bag of shrimp to the fridge","It thaws overnight for Monday's lunch.","Mon lunch, Tue noodles, Wed alfredo"],
+  ["Portion and freeze 4 chili containers","Label each one with the date.","Thu, Fri, Sat Red-day backups"],
+  ["Pack Monday's lunch","Shrimp quinoa bowl plus an ice pack.","Monday you says thank you"],
+];
+function thumbFor(id){return state.photos[id]?`<img class="mini" src="${esc(state.photos[id])}" alt="" loading="lazy">`:`<span class="mini empty" aria-hidden="true">🍽️</span>`;}
+function checkRow(kind,k,title,sub,on){return `<label><input type="checkbox" id="${kind}${k}" data-chk="${kind}" data-k="${k}" ${on?"checked":""}><span>${title}${sub?`<br><span class="uses">${sub}</span>`:""}</span></label>`;}
+function renderWeek(){
+  const ch=state.checks;
+  const PREP=curWeek().prep, GROCERY=curWeek().groc, PLAN=curWeek().plan;
+  $("#prepList").innerHTML=PREP.map((p,i)=>checkRow("prep",i,`<b>${esc(p[0])}</b><br><span class="muted" style="font-size:.88rem">${esc(p[1])}</span>`,"For: "+esc(p[2]),ch.prep[i])).join("");
+  const pd=PREP.filter((_,i)=>ch.prep[i]).length;$("#prepCount").textContent=`${pd} of ${PREP.length} done`;
+  $("#weekList").innerHTML=PLAN.map(p=>{const dn=p.d1.y;const swaps=["g","r"].filter(k=>p.d1[k]!==dn).map(k=>`<span class="dot ${k}" style="width:9px;height:9px"></span> ${esc(MEALS[p.d1[k]].n)}`).join(" · ");
+    return `<div class="dayblock"><h3>${p.d}</h3>
+    <div class="mrow"><b>Breakfast</b><button class="linkish nm" data-open="${p.b}">${esc(MEALS[p.b].n)}</button>${thumbFor(p.b)}</div>
+    <div class="mrow"><b>Lunch</b><button class="linkish nm" data-open="${p.l}">${esc(MEALS[p.l].n)}</button>${thumbFor(p.l)}</div>
+    <div class="mrow"><b>Snack</b><span class="nm">${esc(p.s)}</span><span class="mini empty" aria-hidden="true">🥜</span></div>
+    <div class="mrow"><b>Dinner</b><span class="nm"><button class="linkish" data-open="${dn}">${esc(MEALS[dn].n)}</button>${swaps?`<br><span class="swapnote">Swap: ${swaps}</span>`:""}</span>${thumbFor(dn)}</div>
+    <span class="chip reuse" style="align-self:flex-start;margin-top:4px">↻ ${esc(p.reuse)}</span></div>`;}).join("");
+  let n=0,d=0;
+  $("#grocList").innerHTML=GROCERY.map((g,gi)=>`<div class="groc"><h3 style="margin-bottom:4px">${g.h}</h3>${g.items.map((it,ii)=>{const k=gi+"-"+ii;n++;if(ch.groc[k])d++;return checkRow("groc",k,esc(it[0]),"Used in: "+esc(it[1]),ch.groc[k])}).join("")}</div>`).join("");
+  $("#grocCount").textContent=`${d} of ${n} in the cart`;
+}
+function renderMeals(){
+  const f=[["all","All"],["fav","★ Favorites"],["breakfast","🍳 Breakfast"],["lunch","🥡 Lunch"],["dinner","🌙 Dinner"],["snack","🥜 Snacks"],["g","Green"],["y","Yellow"],["r","Red"]];
+  $("#mealFilters").innerHTML=f.map(([k,l])=>`<button data-mf="${k}" aria-pressed="${state.mealFilter===k}">${l}</button>`).join("");
+  const m=allMeals(), mf=state.mealFilter;
+  const ids=Object.keys(m).filter(id=>mf==="all"||(mf==="fav"&&state.favs.has(id))||m[id].e===mf||m[id].t===mf);
+  $("#mealList").innerHTML=ids.length?ids.map(id=>slot(m[id].t+(m[id].extra?" · new from Rachel":""),id)).join(""):`<p class="muted">${mf==="fav"?"Tap the ★ on any meal you like and it lands here.":"No meals here yet."}</p>`;
+}
+function renderSnacks(){
+  $("#snackList").innerHTML=PANTRY_GROUPS.map(([gk,gh,gp])=>`<div class="stack" style="gap:8px"><h3 style="margin-top:10px">${gh}</h3>${gp?`<p class="muted" style="margin:0;font-size:.9rem">${gp}</p>`:""}<div class="snacks">`+SNACKS.map((s,i)=>[s,i]).filter(([s])=>!s.hide&&(s.g||"snack")===gk).map(([s,i])=>{const pid="snack_"+i;return `<div class="snack">${state.photos[pid]?`<img class="pic" src="${esc(state.photos[pid])}" alt="${esc(s.n)}" loading="lazy">`:`<div class="pic" style="background:var(${s.c})">${esc(s.n)}</div>`}<div class="body">${state.photos[pid]?`<b>${esc(s.n)}</b>`:""}${photoBtn(pid)}<span class="chip" style="align-self:flex-start">${esc(s.tag)}</span><span>${esc(s.d)}</span>${s.u?`<details class="howuse"><summary>💡 Ways to use it</summary><ul>${s.u.map(([e,x])=>`<li><span class="dot ${e}"></span>${esc(x)}</li>`).join("")}</ul></details>`:""}<div class="stores">${s.s.map(st=>`<a href="${STORE_URL[st](s.q)}" target="_blank" rel="noopener">${st}</a>`).join("")}</div></div></div>`}).join("")+`</div></div>`).join("");
+}
+function photoBtn(id){return state.canUpload?`<button class="photobtn" data-photo="${id}">${state.photos[id]?"Change photo":"+ Add photo"}</button>`:"";}
+async function pickPhoto(id){
+  const inp=document.createElement("input");inp.type="file";inp.accept="image/*";
+  inp.onchange=async()=>{const f=inp.files[0];if(!f)return;
+    try{const a=await state.assets.upload(f);await state.db.doc("photos/"+id).set({assetId:a.id,url:a.url,at:Date.now()});}
+    catch(e){const s=$("#photoStatus");if(s)s.textContent="Couldn't upload that photo. Try a JPG or PNG under 20 MB.";}};
+  inp.click();
+}
+function fmtDate(ms){try{return new Date(ms).toLocaleString([], {weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}catch(_){return""}}
+const METRICS=[
+  {k:"energy",n:"Energy",em:"⚡",lo:"Running on empty",hi:"Full tank",c:"--g",ex:["🫠 Too wiped to make my own dinner after cooking for everyone","😮‍💨 Got through work, but skipped a meal or two","🙂 Doing okay. A Yellow-day dinner felt doable","😊 Had energy left for a walk outside","🤩 Felt like prepping, playing, or hitting the gym"]},
+  {k:"pain",n:"Pain",em:"🩹",lo:"No pain",hi:"Flaring",c:"--r",ex:["🌿 No pain today","😌 A little achy after being on my feet","😕 Noticeable. It slowed me down","😣 Flare-up. I needed to rest","😫 Bad flare. Hard to get through my shift"]},
+  {k:"hunger",n:"Hunger cues",em:"🍽️",lo:"Didn't feel hungry",hi:"Clear hunger signals",c:"--y",ex:["😶 No hunger at all, or too tired to notice","🤔 A faint hint of hunger once today","🙂 Noticed I was hungry at least once and ate","😋 Felt hungry around a couple of mealtimes","🌟 Hungry at regular times. My body is asking for fuel"]},
+  {k:"stress",n:"Stress",em:"🧠",lo:"Calm",hi:"Overwhelmed",c:"--accent",ex:["🧘‍♀️ Calm. Felt like myself","🙂 A few small things, nothing big","😐 Busy day, but I managed","😬 Chores piled up and I redid things myself","🤯 Overwhelmed. I put myself last again"]},
+  {k:"load",n:"Home load",em:"🏡",lo:"I did it all",hi:"Family pitched in",c:"--star",ex:["😩 I did every chore myself","😓 Mostly me, with a little help","🤝 We split it about half and half","🙌 Everyone handled their own chores","💖 I let them do it their way and I rested"]},
+];
+const todayKey=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
+const WIN_PROMPTS=[
+  "What's one way you took care of your body today?",
+  "What's one thing you did just for YOU today?",
+  "What did you hand off or let someone else handle today?",
+  "What meal or snack are you proud you ate today?",
+  "When did you feel calm, or most like yourself, today?",
+  "What did you let go of, even something small?",
+  "What moment with your family felt good today?",
+];
+let pulseDraft={}, pulseOff=0;
+const selDate=()=>{const d=new Date();d.setDate(d.getDate()+pulseOff);return d;};
+const selKey=()=>{const d=selDate();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
+function renderPulse(){
+  const isCoach=state.role==="coach";
+  const dstr=new Date().toLocaleDateString([], {weekday:"long",month:"long",day:"numeric"});
+  $("#pulseSub").textContent=(isCoach?CN+"'s daily check-in (preview)":"A few taps and a win. Takes 30 seconds.")+" · 📅 Today is "+dstr;
+  const today=state.pulse.find(p=>p.id===selKey());
+  const dayLbl=pulseOff===0?"Today":pulseOff===-1?"Yesterday":selDate().toLocaleDateString([], {weekday:"long"});
+  const nav=`<div class="daynav"><button data-pday="-1" aria-label="Previous day" ${pulseOff<=-30?"disabled":""}>‹</button><div><b>${dayLbl}</b><br><span class="muted" style="font-size:.85rem">${selDate().toLocaleDateString([], {weekday:"long",month:"long",day:"numeric"})}</span></div><button data-pday="1" aria-label="Next day" ${pulseOff>=0?"disabled":""}>›</button></div>`;
+  if(!Object.keys(pulseDraft).length&&today)METRICS.forEach(m=>{if(today[m.k])pulseDraft[m.k]=today[m.k]});
+  $("#pulseForm").innerHTML=nav+(isCoach?`<div class="tip"><b>Preview: this is what ${CN} sees.</b> ${state.pulse.length?`She has logged ${state.pulse.length} day${state.pulse.length>1?"s":""} so far. See them under "Your month."`:"No entries from her yet."} You can tap around, but only her saves count.</div>`:"")+
+    METRICS.map(m=>`<div class="stack" style="gap:6px"><b>${m.em} ${m.n}</b><div class="scale">${[1,2,3,4,5].map(v=>`<span class="tipwrap"><button data-pm="${m.k}" data-pv="${v}" aria-pressed="${pulseDraft[m.k]===v}" aria-label="${m.n} ${v}: ${esc(m.ex[v-1])}">${v}</button><span class="pop" role="tooltip">${esc(m.ex[v-1])}</span></span>`).join("")}</div><div class="ends"><span>${m.lo}</span><span>${m.hi}</span></div><div class="picked" id="pk-${m.k}">${pulseDraft[m.k]?esc(m.ex[pulseDraft[m.k]-1]):""}</div></div>`).join("")+
+    `<div class="stack" style="gap:6px"><b>🏆 ${esc(WIN_PROMPTS[selDate().getDay()])}</b><textarea id="pulseWin" placeholder="Big or small counts. A sentence is plenty.">${esc(today?.win||"")}</textarea></div>
+    <button class="primary" id="pulseBtn" ${isCoach?"disabled":""}>${isCoach?"Save ("+CN+" only)":(today?"Update ":"Save ")+dayLbl.toLowerCase()}</button><span class="status" id="pulseStatus">${today?"Already logged. Saving again updates it.":"Fill in as much or as little as you want. Even one tap counts! ✨"}</span>`;
+}
+function renderTrend(){
+  if(!state.metric)state.metric="energy";
+  $("#trendPick").innerHTML=METRICS.map(m=>`<button data-metric="${m.k}" aria-pressed="${state.metric===m.k}">${m.n}</button>`).join("");
+  const m=METRICS.find(x=>x.k===state.metric), byDay={};state.pulse.forEach(p=>byDay[p.id]=p);
+  const days=[];for(let i=29;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");days.push({k,d,v:byDay[k]?.[m.k]});}
+  const logged=days.filter(x=>x.v);
+  if(!logged.length){$("#trendChart").innerHTML=`<p class="muted" style="margin:0">Your chart fills in as you log your Daily Pulse. After a week you'll start to see patterns, like how stress and home load line up with pain.</p>`;}
+  else{
+    const W=600,H=220,L=34,R=12,T=14,B=30,x=i=>L+i*(W-L-R)/29,y=v=>T+(5-v)*(H-T-B)/4;
+    let path="",prev=false;days.forEach((dd,i)=>{if(dd.v){path+=(prev?"L":"M")+x(i).toFixed(1)+" "+y(dd.v).toFixed(1)+" ";prev=true}else prev=false;});
+    const avg=(logged.reduce((a,b)=>a+b.v,0)/logged.length).toFixed(1);
+    $("#trendChart").innerHTML=`<div class="row" style="justify-content:space-between"><span><b>${m.n}</b> <span class="muted" style="font-size:.85rem">1 = ${m.lo.toLowerCase()}, 5 = ${m.hi.toLowerCase()}</span></span><span class="chip">30-day average ${avg}</span></div>
+    <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${m.n} over the last 30 days">
+      ${[1,2,3,4,5].map(v=>`<line class="grid" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-10}" y="${y(v)+4}" text-anchor="end">${v}</text>`).join("")}
+      ${[0,7,14,21,29].map(i=>`<text x="${x(i)}" y="${H-8}" text-anchor="middle">${days[i].d.toLocaleDateString([], {month:"short",day:"numeric"})}</text>`).join("")}
+      <path d="${path}" fill="none" stroke="var(${m.c})" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+      ${days.map((dd,i)=>dd.v?`<circle cx="${x(i)}" cy="${y(dd.v)}" r="5" fill="var(${m.c})" stroke="var(--surface)" stroke-width="2"><title>${dd.d.toLocaleDateString()}: ${dd.v}</title></circle>`:"").join("")}
+    </svg>`;
+  }
+  const recent=[...state.pulse].sort((a,b)=>b.id.localeCompare(a.id)).slice(0,14);
+  $("#pulseHistory").innerHTML=recent.length?`<h3 style="margin-top:6px">Recent days</h3>`+recent.map(p=>{const d=new Date(p.id+"T12:00:00");return `<div class="hist"><b>${d.toLocaleDateString([], {weekday:"long",month:"short",day:"numeric"})}</b><div class="row">${METRICS.map(mm=>p[mm.k]?`<span class="chip">${mm.n} ${p[mm.k]}</span>`:"").join("")}</div>${p.win?`<span>🏆 ${esc(p.win)}</span>`:""}</div>`}).join(""):"";
+}
+function renderThread(){
+  const isCoach=state.role==="coach";
+  $("#msgTitle").textContent=isCoach?"Messages with "+CN:"Messages with Rachel";
+  $("#msgText").placeholder=isCoach?"Write "+CN+" a message…":"Write Rachel a message…";
+  if(!state.db){$("#thread").innerHTML=`<p class="muted" style="margin:0">Sign in on claude.ai to send messages.</p>`;return;}
+  const msgs=state.notes.filter(n=>n.kind==="message"||(!n.mealId&&n.text&&!n.kind)).slice().reverse();
+  const th=$("#thread");
+  th.innerHTML=msgs.length?msgs.map(n=>`<div class="bub ${n.role===state.role?"mine":""}"><small>${n.role==="coach"?"Rachel":CN} · ${fmtDate(n.at)}</small><p>${esc(n.text)}</p></div>`).join(""):`<p class="muted" style="margin:0">${isCoach?"Send "+CN+" a note of encouragement to start.":"Questions, wins, a meal that didn't sit right. Rachel sees everything you send here."}</p>`;
+  th.scrollTop=th.scrollHeight;
+}
+function renderNotes(){
+  const m=allMeals();
+  renderPulse();renderTrend();renderThread();
+  if(!state.db){$("#noteList").innerHTML=`<p class="muted">Sign in on claude.ai to see notes.</p>`;return;}
+  const mn=state.notes.filter(n=>n.mealId);
+  if(!mn.length){$("#noteList").innerHTML=`<p class="muted" style="margin:0">Open any meal and leave a note. It shows up here.</p>`;return;}
+  $("#noteList").innerHTML=mn.map(n=>`<div class="note ${n.role==="coach"?"coach":""}"><div class="who"><span>${n.kind==="message"?"✉️ ":""}${n.role==="coach"?"Rachel":CN}${n.mealId&&m[n.mealId]?" · on "+esc(m[n.mealId].n):""}</span><span>${fmtDate(n.at)}</span></div>
+    ${(n.energy||(n.ate&&n.ate.length)||(n.feel&&n.feel.length))?`<div class="row">${n.energy?`<span class="chip ${n.energy[0].toLowerCase()}">${esc(n.energy)}</span>`:""}${(n.ate||[]).map(a=>`<span class="chip">Ate ${esc(a.toLowerCase())}</span>`).join("")}${(n.feel||[]).map(a=>`<span class="chip">${esc(a)}</span>`).join("")}</div>`:""}
+    ${n.text?`<p>${esc(n.text)}</p>`:""}${n.uid===state.uid?`<button class="del" data-delnote="${n.id}" style="align-self:flex-end">Delete</button>`:""}</div>`).join("");
+}
+function render(){renderWeekPick();renderToday();renderWeek();renderMeals();renderSnacks();renderNotes();}
+
+function openMeal(id){
+  const m=allMeals()[id];if(!m)return;
+  const notes=state.notes.filter(n=>n.mealId===id);
+  $("#sheet").innerHTML=`<div class="row" style="justify-content:space-between;flex-wrap:nowrap;align-items:flex-start"><div class="stack" style="gap:6px;min-width:0"><span class="eyebrow">${esc(m.t)}</span><h2>${esc(m.n)}</h2><div class="row"><span class="chip ${m.e}"><span class="dot ${m.e}"></span>${E[m.e]} energy</span><span class="chip">${esc(m.time)}</span>${star(id)}</div></div><button class="close" data-close aria-label="Close">✕</button></div>
+  ${state.photos[id]?`<img class="hero" src="${esc(state.photos[id])}" alt="${esc(m.n)}">`:""}${photoBtn(id)}<span class="status" id="photoStatus"></span>
+  <div><h3>You'll need</h3><ul>${m.ing.map(i=>`<li>${esc(i)}</li>`).join("")}</ul></div>
+  ${m.how.length?`<div><h3>How</h3><ol>${m.how.map(i=>`<li>${esc(i)}</li>`).join("")}</ol></div>`:""}
+  <div class="stack" style="gap:8px"><h3>Notes on this meal</h3>${notes.map(n=>`<div class="note ${n.role==="coach"?"coach":""}"><div class="who"><span>${n.role==="coach"?"Rachel":CN}</span><span>${fmtDate(n.at)}</span></div><p>${esc(n.text)}</p></div>`).join("")}
+  ${state.db?`<textarea id="mealNote" placeholder="Loved it? Too much? Swapped something?"></textarea><button class="primary" data-mealnote="${id}">Save note</button><span class="status" id="mealNoteStatus"></span>`:`<span class="status">Sign in to leave notes.</span>`}
+  ${m.extra&&state.role==="coach"?`<button class="del" data-delextra="${m.xid}">Remove this idea</button>`:""}</div>`;
+  $("#scrim").hidden=false;
+}
+
+document.addEventListener("click",async ev=>{
+  const t=ev.target.closest("button,[data-open],[data-groc],.scrim");if(!t)return;
+  if(t.id==="scrim"&&ev.target===t){t.hidden=true;return;}
+  if(t.dataset.close!==undefined){$("#scrim").hidden=true;return;}
+  if(t.dataset.star){ev.stopPropagation();return toggleFav(t.dataset.star);}
+  if(t.dataset.photo){return pickPhoto(t.dataset.photo);}
+  if(t.id==="msgBtn")return sendMsg();
+  if(t.id==="copyEmail"){try{await navigator.clipboard.writeText("rachelwahl10@gmail.com");t.textContent="Copied!"}catch(_){const r=document.createRange();r.selectNodeContents($("#emailTxt"));getSelection().removeAllRanges();getSelection().addRange(r);}return;}
+  if(t.dataset.open){return openMeal(t.dataset.open);}
+  if(t.closest("#tabs")){return go(t.dataset.v);}
+  if(t.dataset.goto){return go(t.dataset.goto);}
+  if(t.dataset.day){state.day=+t.dataset.day;return renderToday();}
+  if(t.dataset.e){state.energy=t.dataset.e;try{localStorage.setItem("mm-energy-"+new Date().toDateString(),state.energy)}catch(_){}return renderToday();}
+  if(t.dataset.mf){state.mealFilter=t.dataset.mf;return renderMeals();}
+  if(t.dataset.v&&t.closest(".togg")){const g=t.closest(".togg");if(!g.dataset.multi)g.querySelectorAll("button").forEach(b=>b!==t&&b.setAttribute("aria-pressed","false"));t.setAttribute("aria-pressed",t.getAttribute("aria-pressed")==="true"?"false":"true");return;}
+  if(t.dataset.pm){pulseDraft[t.dataset.pm]=+t.dataset.pv;t.closest(".scale").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b===t));const mm=METRICS.find(x=>x.k===t.dataset.pm);$("#pk-"+mm.k).textContent=mm.ex[+t.dataset.pv-1];return;}
+  if(t.id==="pulseBtn")return savePulse();
+  if(t.dataset.pday){pulseOff=Math.min(0,Math.max(-30,pulseOff+(+t.dataset.pday)));pulseDraft={};return renderPulse();}
+  if(t.dataset.wk!==undefined){state.wk=+t.dataset.wk;try{localStorage.setItem("mm-wk",curWeek().id)}catch(_){}loadChecks();return render();}
+  if(t.dataset.metric){state.metric=t.dataset.metric;return renderTrend();}
+  if(t.classList.contains("foldclose")){const d=t.closest("details");d.open=false;d.scrollIntoView({block:"nearest"});return;}
+  if(t.dataset.mealnote)return sendMealNote(t.dataset.mealnote);
+  if(t.dataset.delnote){try{await state.db.doc("notes/"+t.dataset.delnote).delete()}catch(_){}return;}
+  if(t.dataset.delextra){try{await state.db.doc("extras/"+t.dataset.delextra).delete();$("#scrim").hidden=true}catch(_){}return;}
+  if(t.id==="addBtn")return addExtra();
+});
+document.addEventListener("keydown",ev=>{if(ev.key==="Escape")$("#scrim").hidden=true;if((ev.key==="Enter"||ev.key===" ")&&ev.target.matches(".slot[data-open]")){ev.preventDefault();openMeal(ev.target.dataset.open);}});
+document.addEventListener("change",ev=>{const kind=ev.target.dataset.chk;if(!kind)return;state.checks[kind][ev.target.dataset.k]=ev.target.checked;saveChecks();renderWeek();});
+document.querySelectorAll("details.fold").forEach(d=>{const b=document.createElement("button");b.className="foldclose";b.type="button";b.innerHTML='<span aria-hidden="true">⌃</span> Close';d.querySelector(".fbody").appendChild(b);try{const v=localStorage.getItem("mm-fold-"+d.id);if(v!==null)d.open=v==="1"}catch(_){}d.addEventListener("toggle",()=>{try{localStorage.setItem("mm-fold-"+d.id,d.open?"1":"0")}catch(_){}});});
+function loadChecks(){const v=state.checksAll[curWeek().id];state.checks=(v&&v.week===weekKey())?{prep:v.prep||{},groc:v.groc||{}}:{prep:{},groc:{}};}
+function saveChecks(){state.checks.week=weekKey();state.checksAll[curWeek().id]={...state.checks};try{localStorage.setItem("mm-checks2",JSON.stringify(state.checksAll))}catch(_){}if(state.db)state.db.doc("checks/"+(curWeek().id==="w1"?"week1":curWeek().id)).set({prep:state.checks.prep,groc:state.checks.groc,week:weekKey(),at:Date.now()}).catch(()=>{});}
+async function savePulse(){
+  const win=($("#pulseWin").value||"").trim();
+  if(!METRICS.some(m=>pulseDraft[m.k])&&!win){$("#pulseStatus").textContent="Tap one number or write a win, then save.";return;}
+  if(!state.db){$("#pulseStatus").textContent="Sign in on claude.ai to save.";return;}
+  const data={date:selKey(),win,uid:state.uid,at:Date.now()};METRICS.forEach(m=>{if(pulseDraft[m.k])data[m.k]=pulseDraft[m.k]});
+  $("#pulseBtn").disabled=true;
+  try{await state.db.doc("pulse/"+selKey()).set(data);$("#pulseStatus").textContent="Saved! Rachel can see it too. 💛";}
+  catch(_){$("#pulseStatus").textContent="Couldn't save. You may need edit access from Rachel.";}
+  $("#pulseBtn").disabled=false;
+}
+
+function go(v){state.view=v;document.querySelectorAll(".view").forEach(s=>s.hidden=s.id!=="v-"+v);document.querySelectorAll("#tabs button").forEach(b=>b.dataset.v===v?b.setAttribute("aria-current","page"):b.removeAttribute("aria-current"));window.scrollTo(0,0);}
+
+async function toggleFav(id){
+  if(state.favs.has(id))state.favs.delete(id);else state.favs.add(id);
+  render(); if(!$("#scrim").hidden) openMeal(id);
+  if(!state.db)return;
+  try{state.favs.has(id)?await state.db.doc("favorites/"+id).set({on:true,at:Date.now()}):await state.db.doc("favorites/"+id).delete();}catch(_){}
+}
+async function sendCheckin(){
+  const pick=k=>[...document.querySelectorAll(`.togg[data-k="${k}"] button[aria-pressed="true"]`)].map(b=>b.dataset.v);
+  const text=$("#noteText").value.trim(), energy=pick("energy")[0]||null, ate=pick("ate"), feel=pick("feel");
+  if(!text&&!energy&&!ate.length&&!feel.length){$("#noteStatus").textContent="Tap a few chips or write a note first.";return;}
+  if(!state.db){$("#noteStatus").textContent="Sign in on claude.ai to send notes.";return;}
+  $("#noteBtn").disabled=true;
+  try{await state.db.collection("notes").add({text,energy,ate,feel,role:state.role,uid:state.uid,at:Date.now()});
+    $("#noteText").value="";document.querySelectorAll(".togg button").forEach(b=>b.setAttribute("aria-pressed","false"));$("#noteStatus").textContent=state.role==="coach"?"Sent. "+CN+" will see it here.":"Sent! Rachel will see this. 💛";}
+  catch(e){$("#noteStatus").textContent="Couldn't send. You may need edit access from Rachel.";}
+  $("#noteBtn").disabled=false;
+}
+async function sendMsg(){
+  const text=$("#msgText").value.trim();if(!text)return;
+  if(!state.db){$("#msgStatus").textContent="Sign in on claude.ai to send messages.";return;}
+  $("#msgBtn").disabled=true;
+  try{await state.db.collection("notes").add({text,kind:"message",role:state.role,uid:state.uid,at:Date.now()});$("#msgText").value="";$("#msgStatus").textContent=state.role==="coach"?"Sent.":"Sent to Rachel! 💛";}
+  catch(_){$("#msgStatus").textContent="Couldn't send. You may need edit access from Rachel.";}
+  $("#msgBtn").disabled=false;
+}
+async function sendMealNote(id){
+  const text=($("#mealNote")?.value||"").trim();if(!text)return;
+  try{await state.db.collection("notes").add({text,mealId:id,role:state.role,uid:state.uid,at:Date.now()});$("#mealNote").value="";$("#mealNoteStatus").textContent="Saved.";}
+  catch(_){$("#mealNoteStatus").textContent="Couldn't save. You may need edit access from Rachel.";}
+}
+async function addExtra(){
+  const name=$("#addName").value.trim();if(!name){$("#addStatus").textContent="Give the meal a name first.";return;}
+  const lines=s=>s.split("\n").map(x=>x.trim()).filter(Boolean);
+  try{await state.db.collection("extras").add({name,type:$("#addType").value,energy:$("#addEnergy").value,time:$("#addTime").value.trim()||"Quick",ing:lines($("#addIng").value),how:lines($("#addHow").value),at:Date.now()});
+    ["#addName","#addTime","#addIng","#addHow"].forEach(s=>$(s).value="");$("#addStatus").textContent="Added. "+CN+" will see it in Meals.";}
+  catch(_){$("#addStatus").textContent="Couldn't add that. Try again in a moment.";}
+}
+
+render();
+// ---- Standalone data layer: Google Sheet (Apps Script) backend ----
+const API_URL = "PASTE_APPS_SCRIPT_URL_HERE";
+const PHOTOS = {"b_amaranth": "img/b_amaranth.jpg", "b_amaranth_sav": "img/b_amaranth_sav.jpg", "b_baked": "img/b_baked.jpg", "b_chia": "img/b_chia.jpg", "b_eggmuffins": "img/b_eggmuffins.jpg", "b_oats": "img/b_oats.jpg", "b_overnight": "img/b_overnight.jpg", "b_quinoa": "img/b_quinoa.jpg", "b_salmon": "img/b_salmon.jpg", "b_scramble": "img/b_scramble.jpg", "b_smoothie": "img/b_smoothie.jpg", "d_alfredo": "img/d_alfredo.jpg", "d_bbq": "img/d_bbq.jpg", "d_buffalo": "img/d_buffalo.jpg", "d_chili": "img/d_chili.jpg", "d_chilibatch": "img/d_chilibatch.jpg", "d_cilantro": "img/d_cilantro.jpg", "d_fajita": "img/d_fajita.jpg", "d_lentilsoup": "img/d_lentilsoup.jpg", "d_noodles": "img/d_noodles.jpg", "d_peppers": "img/d_peppers.jpg", "d_salmon": "img/d_salmon.jpg", "d_shrimprice": "img/d_shrimprice.jpg", "d_shrimpsoup": "img/d_shrimpsoup.jpg", "d_spaghetti": "img/d_spaghetti.jpg", "d_tacos": "img/d_tacos.jpg", "d_teri_salmon": "img/d_teri_salmon.jpg", "d_teriyaki": "img/d_teriyaki.jpg", "d_toast": "img/d_toast.jpg", "d_tomatosoup": "img/d_tomatosoup.jpg", "d_tunaplate": "img/d_tunaplate.jpg", "d_whitechili": "img/d_whitechili.jpg", "l_eggbox": "img/l_eggbox.jpg", "l_greek": "img/l_greek.jpg", "l_plate": "img/l_plate.jpg", "l_salmon": "img/l_salmon.jpg", "l_sesame": "img/l_sesame.jpg", "l_shrimp": "img/l_shrimp.jpg", "l_tuna_bean": "img/l_tuna_bean.jpg", "l_tuna_crack": "img/l_tuna_crack.jpg", "l_tuna_veg": "img/l_tuna_veg.jpg", "s_chick": "img/s_chick.jpg", "s_eggs": "img/s_eggs.jpg", "s_hummus": "img/s_hummus.jpg", "s_justin": "img/s_justin.jpg", "s_lupini": "img/s_lupini.jpg", "s_pist": "img/s_pist.jpg", "s_rx": "img/s_rx.jpg", "s_siete": "img/s_siete.jpg", "snack_0": "img/snack_0.jpg", "snack_1": "img/snack_1.jpg", "snack_10": "img/snack_10.jpg", "snack_11": "img/snack_11.jpg", "snack_12": "img/snack_12.jpg", "snack_13": "img/snack_13.jpg", "snack_2": "img/snack_2.jpg", "snack_21": "img/snack_21.jpg", "snack_24": "img/snack_24.jpg", "snack_25": "img/snack_25.jpg", "snack_26": "img/snack_26.jpg", "snack_27": "img/snack_27.jpg", "snack_28": "img/snack_28.jpg", "snack_29": "img/snack_29.jpg", "snack_3": "img/snack_3.jpg", "snack_34": "img/snack_34.jpg", "snack_35": "img/snack_35.jpg", "snack_36": "img/snack_36.jpg", "snack_37": "img/snack_37.jpg", "snack_38": "img/snack_38.jpg", "snack_39": "img/snack_39.jpg", "snack_4": "img/snack_4.jpg", "snack_40": "img/snack_40.jpg", "snack_41": "img/snack_41.jpg", "snack_42": "img/snack_42.jpg", "snack_5": "img/snack_5.jpg", "snack_6": "img/snack_6.jpg", "snack_7": "img/snack_7.jpg", "snack_8": "img/snack_8.jpg", "snack_9": "img/snack_9.jpg"};
+let CN = "Your client";
+state.photos = PHOTOS;
+
+const api = {
+  code: (()=>{try{return localStorage.getItem("mm-code")||""}catch(_){return ""}})(),
+  docs: [], listeners: [], timer: null,
+  async load(){
+    const r = await fetch(API_URL+"?action=list&code="+encodeURIComponent(this.code)+"&t="+Date.now());
+    const j = await r.json();
+    if(j.error) throw new Error(j.error);
+    this.docs = j.docs||[];
+    if(j.clientName) CN = j.clientName;
+    this.listeners.forEach(l=>l());
+    return j;
+  },
+  async post(body){
+    const r = await fetch(API_URL,{method:"POST",body:JSON.stringify({...body,code:this.code})});
+    const j = await r.json();
+    if(j.error) throw new Error(j.error);
+    this.load().catch(()=>{});
+    return j;
+  },
+};
+function snapOf(list){return {docs:list.map(d=>({id:d.id,exists:true,data:()=>d.data})),empty:!list.length,size:list.length};}
+function makeQuery(c,ord,lim){
+  return {
+    orderBy(f,dir){return makeQuery(c,{f,dir:dir||"asc"},lim)},
+    limit(n){return makeQuery(c,ord,n)},
+    onSnapshot(cb){const run=()=>{let l=api.docs.filter(d=>d.c===c);if(ord)l=l.slice().sort((a,b)=>((a.data[ord.f]||0)-(b.data[ord.f]||0))*(ord.dir==="desc"?-1:1));if(lim)l=l.slice(0,lim);cb(snapOf(l));};api.listeners.push(run);run();return()=>{}},
+    add(data){return api.post({action:"set",c,data})},
+    doc(id){return docRef(c,id)},
+  };
+}
+function docRef(c,id){return {
+  set(data){const ex=api.docs.find(d=>d.c===c&&d.id===id);if(ex)ex.data=data;else api.docs.push({c,id,data});api.listeners.forEach(l=>l());return api.post({action:"set",c,id,data})},
+  delete(){api.docs=api.docs.filter(d=>!(d.c===c&&d.id===id));api.listeners.forEach(l=>l());return api.post({action:"delete",c,id})},
+};}
+const sheetDb = {collection:c=>makeQuery(c), doc:p=>{const [c,id]=p.split("/");return docRef(c,id)}};
+
+function showGate(msg){
+  let g=document.getElementById("gate");
+  if(!g){g=document.createElement("div");g.id="gate";document.body.appendChild(g);}
+  g.innerHTML=`<div class="gatebox"><h1 style="margin:0">Meal Map</h1><p class="muted" style="margin:0">Enter the access code from your coach.</p>
+  <input type="text" id="gateCode" autocomplete="off" autocapitalize="off" placeholder="Access code"><button class="primary" id="gateBtn">Open my plan</button><span class="status" id="gateMsg">${msg||""}</span></div>`;
+  const go=async()=>{api.code=$("#gateCode").value.trim();$("#gateMsg").textContent="Checking…";
+    try{await start();try{localStorage.setItem("mm-code",api.code)}catch(_){}}catch(e){$("#gateMsg").textContent=e.message==="bad_code"?"That code didn't work. Check with your coach.":"Couldn't connect. Check your internet and try again.";}};
+  $("#gateBtn").onclick=go;$("#gateCode").onkeydown=e=>{if(e.key==="Enter")go()};
+}
+async function start(){
+  const j=await api.load();
+  document.getElementById("gate")?.remove();
+  state.role=j.role; state.uid=j.role; state.db=sheetDb;
+  $("#appTitle").textContent=CN+"'s Meal Map"; document.title=CN+"'s Meal Map";
+  if(state.role==="coach")$("#coachAdd").hidden=false;
+  const db=sheetDb;
+  db.collection("checks").onSnapshot(s=>{s.docs.forEach(d=>{state.checksAll[d.id==="week1"?"w1":d.id]=d.data();});loadChecks();renderWeek();});
+  db.collection("pulse").onSnapshot(s=>{state.pulse=s.docs.map(d=>({id:d.id,...d.data()}));renderPulse();renderTrend();});
+  db.collection("favorites").onSnapshot(s=>{state.favs=new Set(s.docs.map(d=>d.id));render();});
+  db.collection("extras").orderBy("at","asc").onSnapshot(s=>{state.extras=s.docs.map(d=>({id:d.id,...d.data()}));renderMeals();});
+  db.collection("notes").orderBy("at","desc").limit(100).onSnapshot(s=>{state.notes=s.docs.map(d=>({id:d.id,...d.data()}));renderNotes();});
+  render();
+  clearInterval(api.timer); api.timer=setInterval(()=>{if(!document.hidden)api.load().catch(()=>{})},30000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)api.load().catch(()=>{})});
+}
+render();
+if(api.code){start().catch(e=>showGate(e.message==="bad_code"?"Please enter your code again.":"Couldn't connect. Check your internet and try again."));} else showGate();
+</script>
+</body></html>
