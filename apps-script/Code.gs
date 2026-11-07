@@ -30,13 +30,19 @@ function dataSheet_() {
   return s;
 }
 
+// Google Sheets turns "2026-11-06" into a date; turn it back into text.
+function idStr_(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  return String(v);
+}
+
 function doGet(e) {
   var r = role_(e.parameter.code);
   if (!r) return out_({ error: 'bad_code' });
   var v = dataSheet_().getDataRange().getValues();
   var docs = [];
   for (var i = 1; i < v.length; i++) {
-    try { docs.push({ c: v[i][0], id: String(v[i][1]), data: JSON.parse(v[i][2]) }); } catch (err) {}
+    try { docs.push({ c: v[i][0], id: idStr_(v[i][1]), data: JSON.parse(v[i][2]) }); } catch (err) {}
   }
   var name = PropertiesService.getScriptProperties().getProperty('CLIENT_NAME') || 'Your client';
   return out_({ role: r, clientName: name, docs: docs });
@@ -58,7 +64,7 @@ function doPost(e) {
     var row = -1;
     if (b.id) {
       for (var i = 1; i < v.length; i++) {
-        if (v[i][0] === b.c && String(v[i][1]) === String(b.id)) { row = i + 1; break; }
+        if (v[i][0] === b.c && idStr_(v[i][1]) === String(b.id)) { row = i + 1; break; }
       }
     }
     if (b.action === 'delete') {
@@ -69,7 +75,7 @@ function doPost(e) {
     var json = JSON.stringify(b.data || {});
     if (json.length > 40000) return out_({ error: 'too_big' });
     if (row > 0) s.getRange(row, 3, 1, 2).setValues([[json, new Date()]]);
-    else s.appendRow([b.c, id, json, new Date()]);
+    else s.appendRow([b.c, "'" + id, json, new Date()]);
     if (b.c === 'pulse') pulseRow_(id, b.data || {});
     if (b.c === 'notes') noteRow_(b.data || {});
     return out_({ ok: true, id: id });

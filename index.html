@@ -708,7 +708,10 @@ const api = {
     const r = await fetch(API_URL+"?action=list&code="+encodeURIComponent(this.code)+"&t="+Date.now());
     const j = await r.json();
     if(j.error) throw new Error(j.error);
-    this.docs = j.docs||[];
+    const ymd=t=>t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");
+    const seen={};
+    (j.docs||[]).forEach(d=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(d.id)&&d.c==="pulse"){const t=new Date(d.id);if(!isNaN(t))d.id=ymd(t);}seen[d.c+"|"+d.id]=d;});
+    this.docs = Object.values(seen);
     if(j.clientName) CN = j.clientName;
     this.listeners.forEach(l=>l());
     return j;
