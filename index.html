@@ -440,18 +440,70 @@ var GROCERY = [
   {h:"Fridge + freezer",items:[["Hummus + hummus singles","Lunches + snacks"],["Feta, goat cheese","Breakfasts + bowls"],["Plant milk (unsweetened)","Smoothie + oats"],["Frozen berries","Smoothie + squares"],["Steam-in-bag broccoli + veggies (no corn or peas)","Dinners"],["Frozen stir-fry veg (no corn or peas)","Noodles"]]},
 ];
 
-const WEEKS=[
-  {id:"w1",label:"Week 1",note:"Your first week",plan:PLAN,prep:PREP,groc:GROCERY},
+
+var PLAN2=[
+  {d:"Mon",b:"b_eggmuffins",l:"l_greek",s:"RXBAR + an apple",d1:{g:"d_fajita",y:"d_fajita",r:"d_whitechili"},reuse:"Fajita peppers + onion from Sunday prep go into tacos tomorrow."},
+  {d:"Tue",b:"b_overnight",l:"l_greek",s:"Hummus cup + Simple Mills crackers",d1:{g:"d_tacos",y:"d_tacos",r:"d_tunaplate"},reuse:"Same peppers + black beans as last night's fajitas."},
+  {d:"Wed",b:"b_eggmuffins",l:"l_tuna_veg",s:"Brami lupini beans + cucumber",d1:{g:"d_cilantro",y:"d_cilantro",r:"d_shrimprice"},reuse:"Make 2 cilantro-lime bowls. The second one is Friday's lunch."},
+  {d:"Thu",b:"b_overnight",l:"l_greek",s:"Pistachios + a clementine",d1:{g:"d_whitechili",y:"d_whitechili",r:"d_whitechili"},reuse:"White bean chili from the freezer. Zero cooking tonight."},
+  {d:"Fri",b:"b_eggmuffins",l:"d_cilantro",s:"Justin's almond butter pack + banana",d1:{g:"d_bbq",y:"d_bbq",r:"d_whitechili"},reuse:"Lunch is Wednesday's extra cilantro-lime bowl."},
+  {d:"Sat",b:"b_scramble",l:"l_plate",s:"Siete chips + guacamole cup",d1:{g:"d_spaghetti",y:"d_spaghetti",r:"d_alfredo"},reuse:"Leftover peppers + spinach in the scramble, leftover zucchini in the spaghetti."},
+  {d:"Sun",b:"b_chia",l:"d_spaghetti",s:"Hard-boiled eggs + fruit",d1:{g:"d_lentilsoup",y:"d_lentilsoup",r:"d_spaghetti"},reuse:"Tonight's lentil soup is next week's freezer meal. Start Week 3 prep."},
 ];
+var PREP2=[
+  ["Simmer the white bean + zucchini chili","Make the full recipe. It simmers while you do the rest.","Thu dinner + Red-day backups (freeze 3 portions)"],
+  ["Bake 12 veggie egg muffins","Peppers, spinach and onion. 350°F for 20–22 min.","Mon, Wed, Fri breakfasts + snacks"],
+  ["Make 3 jars of overnight oats","Oats, Ripple, Truvani, chia. Top with berries in the morning.","Tue + Thu breakfasts"],
+  ["Mix the Greek chickpea salad (3 servings)","Chickpeas, cucumber, tomatoes, olives, feta, Greek dressing.","Mon, Tue, Thu lunches"],
+  ["Slice 3 bell peppers + 1 onion","Store together in one container.","Fajitas, tacos, Saturday scramble"],
+  ["Move 1 bag of shrimp to the fridge","It thaws overnight.","Wed bowls, Fri BBQ shrimp"],
+];
+var GROC2=[
+  {h:"Produce",items:[["Bell peppers (5)","Egg muffins, fajitas, tacos, scramble"],["Onions (2)","Chili, fajitas, egg muffins"],["Zucchini (2)","White bean chili + spaghetti"],["Avocados (4)","Fajitas, tacos, bowls, chili topping"],["Spinach (big tub)","Egg muffins, scramble, spaghetti"],["Cucumbers (2)","Greek salad, tuna lunch, lupini snack"],["Cherry tomatoes","Greek salad, tacos, bowls"],["Limes (2) + cilantro","Fajitas + cilantro-lime bowls"],["Sweet potatoes (2)","BBQ shrimp"],["Carrots + celery","Tuna lunch + lentil soup"],["Berries, bananas, apples, clementines","Breakfasts + snacks"]]},
+  {h:"Protein",items:[["Eggs (2 dozen)","Egg muffins, scramble, snacks"],["Frozen cooked shrimp (2 bags)","Cilantro-lime bowls, BBQ shrimp, spaghetti"],["Tuna pouches (3)","Tuna lunch + Red-day plate"],["Feta","Greek salad + egg muffins"]]},
+  {h:"Pantry",items:[["Black beans (3 cans)","Fajitas, tacos, cilantro-lime bowls"],["White beans (2 cans)","White bean chili"],["Chickpeas (2 cans)","Greek salad + snack plate"],["Red lentils","Sunday lentil soup"],["Green chiles + diced tomatoes","Chili + lentil soup"],["GF vegetable broth (2)","Chili + lentil soup"],["Microwave rice cups","Fajitas + bowls"],["Siete tortillas + chips","Tacos + snack"],["Banza spaghetti + Rao's marinara","Saturday spaghetti"],["GF oats, chia, Truvani","Overnight oats + chia pudding"],["PK Greek + Cilantro Lime dressings, Unsweetened BBQ","Salads, bowls, BBQ shrimp"],["Siete taco seasoning","Fajitas + tacos"]]},
+  {h:"Fridge",items:[["Ripple or almond milk","Oats + chia pudding"],["Hummus singles + guacamole cups","Snacks"],["Sour cream (if it sits well)","Tacos + chili"]]},
+];
+var PLAN3=[
+  {d:"Mon",b:"b_chia",l:"l_sesame",s:"Hard-boiled eggs + fruit",d1:{g:"d_teri_salmon",y:"d_teri_salmon",r:"d_lentilsoup"},reuse:"Make 2 salmon portions. Tomorrow's lunch is the second one."},
+  {d:"Tue",b:"b_quinoa",l:"d_teri_salmon",s:"Biena roasted chickpeas + grapes",d1:{g:"d_teriyaki",y:"d_teriyaki",r:"d_shrimprice"},reuse:"Same teriyaki sauce + broccoli as last night."},
+  {d:"Wed",b:"b_chia",l:"l_sesame",s:"Brami lupini beans + cucumber",d1:{g:"d_buffalo",y:"d_buffalo",r:"d_tunaplate"},reuse:"Make 2 buffalo bowls. The second is Thursday's lunch."},
+  {d:"Thu",b:"b_quinoa",l:"d_buffalo",s:"Pistachios + a clementine",d1:{g:"d_lentilsoup",y:"d_lentilsoup",r:"d_lentilsoup"},reuse:"Red lentil soup from the freezer. Zero cooking tonight."},
+  {d:"Fri",b:"b_chia",l:"l_shrimp",s:"Justin's almond butter pack + banana",d1:{g:"d_shrimpsoup",y:"d_shrimpsoup",r:"d_lentilsoup"},reuse:"Leftover rice noodles + ginger go into tonight's soup."},
+  {d:"Sat",b:"b_salmon",l:"l_eggbox",s:"Siete chips + guacamole cup",d1:{g:"d_salmon",y:"d_salmon",r:"d_alfredo"},reuse:"Last of the broccoli goes with tonight's salmon."},
+  {d:"Sun",b:"b_amaranth",l:"l_plate",s:"Hummus cup + Simple Mills crackers",d1:{g:"d_whitechili",y:"d_whitechili",r:"d_whitechili"},reuse:"Last freezer portion of white bean chili from Week 2."},
+];
+var PREP3=[
+  ["Freeze 3 portions of red lentil soup","You made it Sunday night. Label with the date.","Thu dinner + Red-day backups"],
+  ["Cook a pot of quinoa (2 cups dry)","Simmer 15 min, cool, refrigerate.","Tue + Thu breakfasts, Tue + Fri lunches, buffalo bowls"],
+  ["Hard-boil 8 eggs","Boil 10 min, ice bath, peel 4.","Quinoa breakfasts, lunch box, snacks"],
+  ["Make 3 jars of chia pudding","Chia, Ripple, Truvani. Berries on top in the morning.","Mon, Wed, Fri breakfasts"],
+  ["Make the sesame noodle salad (2 servings)","Rice noodles, shrimp, cucumber, carrots, sesame ginger dressing. Cook extra noodles for Friday's soup.","Mon + Wed lunches"],
+  ["Cut broccoli + thaw shrimp","Broccoli florets into a container. Shrimp bag into the fridge.","Salmon, stir-fry, Saturday bowl"],
+];
+var GROC3=[
+  {h:"Produce",items:[["Broccoli (2 big crowns)","Teriyaki salmon, stir-fry, salmon bowl"],["Cucumbers (3)","Noodle salad, lupini snack, lunch box"],["Carrots","Noodle salad + buffalo bowl"],["Fresh ginger","Noodle salad, stir-fry, noodle soup"],["Spinach","Quinoa breakfast, noodle soup, amaranth"],["Avocados (2)","Smoked salmon toast + chili"],["Lemons (2)","Shrimp quinoa bowl + salmon"],["Berries, bananas, grapes, clementines","Breakfasts + snacks"]]},
+  {h:"Protein",items:[["Salmon fillets (3)","Teriyaki salmon (x2) + Saturday bowl"],["Frozen cooked shrimp (2 bags)","Noodle salad, stir-fry, quinoa bowl, noodle soup"],["Eggs (1½ dozen)","Hard-boiled, quinoa breakfasts, toast"],["Smoked salmon","Saturday breakfast"],["Tuna pouch","Red-day plate"]]},
+  {h:"Pantry",items:[["Quinoa","Breakfasts, lunches, buffalo bowls"],["Rice noodles","Noodle salad + noodle soup"],["Chickpeas (2 cans)","Buffalo bowl + snack plate"],["Frozen cauliflower","Buffalo bowl"],["Microwave rice cups","Stir-fry + salmon bowl"],["GF vegetable broth","Noodle soup"],["Amaranth","Sunday breakfast"],["PK No-Soy Teriyaki, Buffalo, Ranch, Sesame Ginger","Salmon, stir-fry, buffalo bowl, noodle salad"],["GF tamari","Noodle soup"],["Canyon Bakehouse bread","Smoked salmon toast"]]},
+  {h:"Fridge",items:[["Ripple or almond milk","Chia pudding"],["Hummus singles + guacamole cups","Snacks + lunch box"],["Feta","Quinoa breakfast"]]},
+];
+const WEEKS=[
+  {id:"w1",label:"Week 1",start:"2026-11-09",plan:PLAN,prep:PREP,groc:GROCERY},
+  {id:"w2",label:"Week 2",start:"2026-11-16",plan:PLAN2,prep:PREP2,groc:GROC2},
+  {id:"w3",label:"Week 3",start:"2026-11-23",plan:PLAN3,prep:PREP3,groc:GROC3},
+];
+function currentWeekIdx(){const now=new Date();let idx=0;WEEKS.forEach((w,i)=>{if(now>=new Date(w.start+"T00:00:00"))idx=i;});return idx;}
 const curWeek=()=>{const w=WEEKS[state.wk]||WEEKS[WEEKS.length-1];if(!w.prep&&w.id==="w1")w.prep=PREP;return w;};
 function renderWeekPick(){
   $("#weekPick").innerHTML=WEEKS.map((w,i)=>`<button data-wk="${i}" aria-pressed="${i===state.wk}">🗂️ ${esc(w.label)}</button>`).join("");
-  $("#weekEyebrow").textContent=`${curWeek().label} · ${state.wk===WEEKS.length-1?"Your plan from Rachel":"A past week, still here for leftovers"}`;
+  const w=curWeek(),st=new Date(w.start+"T00:00:00"),en=new Date(st);en.setDate(en.getDate()+6);const f=d=>d.toLocaleDateString([], {month:"short",day:"numeric"});
+  const cw=currentWeekIdx(),lbl=state.wk===cw?"This week":state.wk<cw?"A past week, still here for leftovers":"Coming up";
+  $("#weekEyebrow").textContent=`${w.label} · ${f(st)}–${f(en)} · ${lbl}`;
 }
-let state = {wk:WEEKS.length-1, checksAll:{}, checks:{prep:{},groc:{}}, pulse:[], metric:"energy", photos:{},assets:null, canUpload:false, view:"today", day:(new Date().getDay()+6)%7, energy:null, mealFilter:"all", favs:new Set(), extras:[], notes:[], db:null, role:"client", uid:null};
+let state = {wk:currentWeekIdx(), checksAll:{}, checks:{prep:{},groc:{}}, pulse:[], metric:"energy", photos:{},assets:null, canUpload:false, view:"today", day:(new Date().getDay()+6)%7, energy:null, mealFilter:"all", favs:new Set(), extras:[], notes:[], db:null, role:"client", uid:null};
 try{ const e=localStorage.getItem("mm-energy-"+new Date().toDateString()); if(e) state.energy=e; }catch(_){}
 function weekKey(){const d=new Date();d.setDate(d.getDate()-((d.getDay()+6)%7));return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();}
-try{ const w=localStorage.getItem("mm-wk"); const i=WEEKS.findIndex(x=>x.id===w); if(i>=0) state.wk=i; }catch(_){}
+try{ const w=sessionStorage.getItem("mm-wk"); const i=WEEKS.findIndex(x=>x.id===w); if(i>=0) state.wk=i; }catch(_){}
 try{ const c=JSON.parse(localStorage.getItem("mm-checks2")||"null"); if(c) state.checksAll=c; }catch(_){}
 loadChecks();
 const $=s=>document.querySelector(s);
@@ -634,7 +686,7 @@ document.addEventListener("click",async ev=>{
   if(t.dataset.pm){pulseDraft[t.dataset.pm]=+t.dataset.pv;t.closest(".scale").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b===t));const mm=METRICS.find(x=>x.k===t.dataset.pm);$("#pk-"+mm.k).textContent=mm.ex[+t.dataset.pv-1];return;}
   if(t.id==="pulseBtn")return savePulse();
   if(t.dataset.pday){pulseOff=Math.min(0,Math.max(-30,pulseOff+(+t.dataset.pday)));pulseDraft={};return renderPulse();}
-  if(t.dataset.wk!==undefined){state.wk=+t.dataset.wk;try{localStorage.setItem("mm-wk",curWeek().id)}catch(_){}loadChecks();return render();}
+  if(t.dataset.wk!==undefined){state.wk=+t.dataset.wk;try{sessionStorage.setItem("mm-wk",curWeek().id)}catch(_){}loadChecks();return render();}
   if(t.dataset.metric){state.metric=t.dataset.metric;return renderTrend();}
   if(t.classList.contains("foldclose")){const d=t.closest("details");d.open=false;d.scrollIntoView({block:"nearest"});return;}
   if(t.dataset.mealnote)return sendMealNote(t.dataset.mealnote);
