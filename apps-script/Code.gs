@@ -77,7 +77,10 @@ function doPost(e) {
     if (row > 0) s.getRange(row, 3, 1, 2).setValues([[json, new Date()]]);
     else s.appendRow([b.c, "'" + id, json, new Date()]);
     if (b.c === 'pulse') pulseRow_(id, b.data || {});
-    if (b.c === 'notes') noteRow_(b.data || {});
+    if (b.c === 'notes') {
+      noteRow_(b.data || {});
+      if (r === 'client') notify_(b.data || {});
+    }
     return out_({ ok: true, id: id });
   } finally {
     lock.releaseLock();
@@ -115,4 +118,23 @@ function noteRow_(d) {
   }
   s.appendRow([new Date(d.at || Date.now()), d.role === 'coach' ? 'Coach' : 'Client',
     d.kind === 'message' ? 'Message' : (d.mealId ? 'Meal note' : 'Note'), d.mealId || '', d.text || '']);
+}
+
+// Emails the coach when the client sends a message or meal note.
+// Optional Script Property NOTIFY_EMAIL; defaults to the Sheet owner's email.
+function notify_(d) {
+  try {
+    var p = PropertiesService.getScriptProperties();
+    var to = p.getProperty('NOTIFY_EMAIL') || Session.getEffectiveUser().getEmail();
+    var name = p.getProperty('CLIENT_NAME') || 'Your client';
+    var isMsg = d.kind === 'message';
+    var subject = isMsg ? '💬 New message from ' + name : '📝 ' + name + ' left a meal note';
+    var body = (d.text || '') + '\n\nOpen the app to reply: https://wahlcollectiveco-hash.github.io/meal-map/';
+    MailApp.sendEmail(to, subject, body);
+  } catch (err) {}
+}
+
+// Run this once from the editor to approve email sending.
+function testNotify() {
+  notify_({ kind: 'message', text: 'This is a test. Email alerts are working! 🎉' });
 }
